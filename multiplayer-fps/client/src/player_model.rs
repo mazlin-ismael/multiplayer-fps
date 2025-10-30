@@ -44,9 +44,11 @@ pub fn create_player_model(
     let arm_mesh = meshes.add(Cuboid::new(0.12, 0.5, 0.12));
     let leg_mesh = meshes.add(Cuboid::new(0.15, 0.5, 0.15));
 
-    // Arme simple (fusil)
-    let weapon_body_mesh = meshes.add(Cuboid::new(0.08, 0.08, 0.6)); // Corps du fusil
-    let weapon_barrel_mesh = meshes.add(Cuboid::new(0.05, 0.05, 0.3)); // Canon
+    // Arme (fusil d'assaut) - Plus grande et visible
+    let weapon_body_mesh = meshes.add(Cuboid::new(0.1, 0.15, 0.7)); // Corps du fusil
+    let weapon_barrel_mesh = meshes.add(Cuboid::new(0.06, 0.06, 0.5)); // Canon long
+    let weapon_stock_mesh = meshes.add(Cuboid::new(0.08, 0.1, 0.25)); // Crosse
+    let weapon_grip_mesh = meshes.add(Cuboid::new(0.07, 0.15, 0.08)); // Poignée
 
     // Entité parent pour le modèle complet
     // Position 0,0,0 correspond à la position de la caméra (yeux à y=1.7)
@@ -104,20 +106,52 @@ pub fn create_player_model(
                 ..Default::default()
             });
 
-            // Arme (fusil) tenue devant le joueur
+            // Arme (fusil d'assaut) tenue en diagonale devant le joueur
+            // Corps principal du fusil
             parent.spawn(PbrBundle {
                 mesh: weapon_body_mesh,
                 material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.25, -0.6, 0.35)
-                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                transform: Transform::from_xyz(0.22, -0.55, 0.4)
+                    .with_rotation(
+                        Quat::from_rotation_y(std::f32::consts::FRAC_PI_4 * 0.3) // Légère rotation
+                        * Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4 * 0.5) // Incliné vers le bas
+                    ),
                 ..Default::default()
             });
 
-            // Canon de l'arme
+            // Canon long pointant vers l'avant
             parent.spawn(PbrBundle {
                 mesh: weapon_barrel_mesh,
                 material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.25, -0.6, 0.65),
+                transform: Transform::from_xyz(0.22, -0.5, 0.75)
+                    .with_rotation(
+                        Quat::from_rotation_y(std::f32::consts::FRAC_PI_4 * 0.3)
+                        * Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4 * 0.5)
+                    ),
+                ..Default::default()
+            });
+
+            // Crosse du fusil (derrière)
+            parent.spawn(PbrBundle {
+                mesh: weapon_stock_mesh,
+                material: weapon_material.clone(),
+                transform: Transform::from_xyz(0.18, -0.58, 0.1)
+                    .with_rotation(
+                        Quat::from_rotation_y(std::f32::consts::FRAC_PI_4 * 0.3)
+                        * Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4 * 0.5)
+                    ),
+                ..Default::default()
+            });
+
+            // Poignée (sous le corps)
+            parent.spawn(PbrBundle {
+                mesh: weapon_grip_mesh,
+                material: weapon_material.clone(),
+                transform: Transform::from_xyz(0.2, -0.65, 0.35)
+                    .with_rotation(
+                        Quat::from_rotation_y(std::f32::consts::FRAC_PI_4 * 0.3)
+                        * Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4 * 0.5)
+                    ),
                 ..Default::default()
             });
         })
