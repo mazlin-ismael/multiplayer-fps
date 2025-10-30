@@ -250,9 +250,9 @@ pub fn create_player_model_gltf(
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
 ) -> Entity {
-    // Essayer de charger le modèle GLTF
+    // Essayer de charger le modèle GLTF (Forest Soldier)
     // Note: Bevy charge les assets de manière asynchrone, donc on crée toujours l'entité
-    let gltf_handle: Handle<Scene> = asset_server.load("models/player.glb#Scene0");
+    let gltf_handle: Handle<Scene> = asset_server.load("models/soldier.glb#Scene0");
 
     // Créer l'entité parent
     let player_entity = commands
@@ -267,8 +267,8 @@ pub fn create_player_model_gltf(
         ))
         .id();
 
-    // Charger l'arme séparément pour la vue des autres joueurs
-    let weapon_gltf: Handle<Scene> = asset_server.load("models/ak47.glb#Scene0");
+    // Charger l'arme séparément pour la vue des autres joueurs (AK-47 de Sketchfab)
+    let weapon_gltf: Handle<Scene> = asset_server.load("models/rifle.glb#Scene0");
     let weapon_entity = commands
         .spawn((
             SceneBundle {

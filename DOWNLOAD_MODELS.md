@@ -37,8 +37,8 @@ Cherchez dans les dossiers extraits :
 cd multiplayer-fps/assets/models/
 
 # Copiez vos fichiers ici et renommez-les :
-# - Soldat → player.glb
-# - AK-47 → ak47.glb
+# - Soldat → soldier.glb
+# - AK-47 / Fusil → rifle.glb
 ```
 
 ### Étape 5 : Lancez le Jeu !
@@ -58,14 +58,14 @@ Si vous préférez Sketchfab :
 ### Soldat Masqué
 1. Allez sur : https://sketchfab.com/search?q=soldier+tactical+mask&type=models&features=downloadable
 2. Choisissez un modèle **"Downloadable"** gratuit
-3. Téléchargez en format **glTF Binary (.glb)**
-4. Renommez en `player.glb`
+3. Téléchargez en format **glTF Binary (.glb)** avec textures 1k
+4. Renommez en `soldier.glb`
 
 ### AK-47
 1. Allez sur : https://sketchfab.com/3d-models/rifle-ak-47-weapon-model-cs2-6b2244ba66274c71abdd194d0b04f731
 2. Cliquez sur **"Download"**
-3. Format **glTF Binary (.glb)**
-4. Renommez en `ak47.glb`
+3. Format **glTF Binary (.glb)** avec textures 1k
+4. Renommez en `rifle.glb`
 
 ---
 
@@ -77,8 +77,8 @@ Votre structure doit être :
 multiplayer-fps/
 └── assets/
     └── models/
-        ├── player.glb    ← Soldat masqué
-        ├── ak47.glb      ← AK-47
+        ├── soldier.glb   ← Soldat masqué (Forest Soldier)
+        ├── rifle.glb     ← AK-47 / Fusil d'assaut
         └── README.md
 ```
 
@@ -92,8 +92,8 @@ Pour vérifier que les modèles se chargent :
 ```bash
 cargo run --bin client
 # Regardez la console pour :
-# "Loaded asset: models/player.glb"
-# "Loaded asset: models/ak47.glb"
+# "Loaded asset: models/soldier.glb"
+# "Loaded asset: models/rifle.glb"
 ```
 
 ---

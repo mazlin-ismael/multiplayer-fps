@@ -3,8 +3,8 @@
 ## 🎯 Modèles Nécessaires
 
 Vous avez besoin de 2 modèles :
-1. **Soldat masqué** (player.glb)
-2. **AK-47** (ak47.glb)
+1. **Soldat masqué** (soldier.glb)
+2. **AK-47 / Fusil** (rifle.glb)
 
 ---
 
@@ -21,9 +21,9 @@ Les meilleurs modèles low-poly pour FPS !
 
 **Fichiers à copier :**
 - Cherchez un soldat avec masque/casque dans le pack
-- Renommez-le en `player.glb` et copiez dans ce dossier
+- Renommez-le en `soldier.glb` et copiez dans ce dossier
 - Cherchez une arme de type fusil d'assaut
-- Renommez-la en `ak47.glb` et copiez dans ce dossier
+- Renommez-la en `rifle.glb` et copiez dans ce dossier
 
 ---
 
@@ -35,8 +35,8 @@ Les meilleurs modèles low-poly pour FPS !
 **Instructions :**
 1. Cliquez sur le lien
 2. Cliquez sur "Download 3D Model" (gratuit)
-3. Choisissez le format **glTF (.glb)**
-4. Téléchargez et renommez en `ak47.glb`
+3. Choisissez le format **glTF (.glb)** avec textures 1k
+4. Téléchargez et renommez en `rifle.glb`
 5. Copiez dans ce dossier (`multiplayer-fps/assets/models/`)
 
 ### Soldat
@@ -45,8 +45,8 @@ Les meilleurs modèles low-poly pour FPS !
 **Instructions :**
 1. Cherchez un soldat masqué qui vous plaît
 2. Vérifiez qu'il est "Downloadable" (icône de téléchargement)
-3. Téléchargez en format **glTF (.glb)**
-4. Renommez en `player.glb`
+3. Téléchargez en format **glTF (.glb)** avec textures 1k
+4. Renommez en `soldier.glb`
 5. Copiez dans ce dossier
 
 ---
@@ -71,8 +71,8 @@ Après téléchargement, votre dossier doit ressembler à :
 
 ```
 multiplayer-fps/assets/models/
-├── player.glb      (Soldat masqué)
-├── ak47.glb        (AK-47)
+├── soldier.glb     (Soldat masqué - Forest Soldier)
+├── rifle.glb       (AK-47 / Fusil d'assaut)
 └── README.md       (ce fichier)
 ```
 
