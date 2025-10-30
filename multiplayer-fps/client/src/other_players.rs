@@ -53,7 +53,8 @@ pub fn receive_other_players_system(
                         if let Some(mut entity_commands) = commands.get_entity(entity) {
                             // rotation[0] = yaw (rotation autour de Y)
                             // rotation[1] = pitch (pas utilisé pour les tanks)
-                            let yaw = rotation[0];
+                            // Ajouter PI (180°) pour inverser car le canon était à l'envers
+                            let yaw = rotation[0] + std::f32::consts::PI;
 
                             entity_commands.insert(
                                 Transform::from_xyz(position[0], position[1], position[2])
