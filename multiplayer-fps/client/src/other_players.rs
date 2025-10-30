@@ -47,11 +47,18 @@ pub fn receive_other_players_system(
                     other_players.players.insert(player_id, player_model);
                 }
                 
-                ServerMessage::PlayerUpdate { player_id, position, rotation: _ } => {
-                    // Mettre à jour la position de l'autre joueur
+                ServerMessage::PlayerUpdate { player_id, position, rotation } => {
+                    // Mettre à jour la position ET la rotation de l'autre joueur (tank)
                     if let Some(&entity) = other_players.players.get(&player_id) {
                         if let Some(mut entity_commands) = commands.get_entity(entity) {
-                            entity_commands.insert(Transform::from_xyz(position[0], position[1], position[2]));
+                            // rotation[0] = yaw (rotation autour de Y)
+                            // rotation[1] = pitch (pas utilisé pour les tanks)
+                            let yaw = rotation[0];
+
+                            entity_commands.insert(
+                                Transform::from_xyz(position[0], position[1], position[2])
+                                    .with_rotation(Quat::from_rotation_y(yaw))
+                            );
                         }
                     }
                 }
