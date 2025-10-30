@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_renet::renet::{RenetClient, DefaultChannel};
 use shared::ServerMessage;
 use std::collections::HashMap;
-use crate::player_model::create_player_model;
+use crate::player_model::{create_player_model_gltf, create_player_model};
 
 // Component pour identifier un autre joueur
 #[derive(Component)]
@@ -22,6 +22,7 @@ pub fn receive_other_players_system(
     mut client: ResMut<RenetClient>,
     mut commands: Commands,
     mut other_players: ResMut<OtherPlayers>,
+    asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     query: Query<(Entity, &OtherPlayer)>,
@@ -33,7 +34,13 @@ pub fn receive_other_players_system(
                     println!("Player {} ({}) joined at {:?}", player_id, name, position);
 
                     // Créer la représentation visuelle de l'autre joueur avec un modèle 3D
-                    let player_model = create_player_model(&mut commands, &mut meshes, &mut materials);
+                    // Essaie de charger le modèle GLTF (soldat masqué + AK-47)
+                    let player_model = create_player_model_gltf(
+                        &mut commands,
+                        &asset_server,
+                        &mut meshes,
+                        &mut materials,
+                    );
 
                     // Attacher le modèle avec la position et le component OtherPlayer
                     commands.entity(player_model).insert((

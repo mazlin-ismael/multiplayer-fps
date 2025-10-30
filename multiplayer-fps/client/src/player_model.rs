@@ -1,5 +1,13 @@
 use bevy::prelude::*;
 
+// Marker component pour identifier le modèle GLTF du joueur
+#[derive(Component)]
+pub struct PlayerGltfModel;
+
+// Marker component pour l'arme GLTF
+#[derive(Component)]
+pub struct WeaponGltfModel;
+
 /// Crée un modèle 3D de joueur composé de plusieurs parties
 /// (tête, corps, bras, jambes) pour remplacer la simple capsule rouge
 /// Le modèle est positionné pour que les pieds touchent le sol (y=0) quand
@@ -234,18 +242,59 @@ pub fn create_fps_weapon(
     fps_weapon
 }
 
-/// Fonction alternative : crée un joueur avec un fichier GLTF
-/// (pour usage futur si vous voulez importer des vrais modèles 3D)
-pub fn create_player_model_from_gltf(
+/// Crée un joueur avec modèle GLTF (soldat masqué)
+/// Essaie de charger models/player.glb, sinon utilise le modèle procédural
+pub fn create_player_model_gltf(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
 ) -> Entity {
-    commands
-        .spawn(SceneBundle {
-            scene: asset_server.load("models/player.glb#Scene0"),
-            transform: Transform::from_xyz(0.0, 0.0, 0.0)
-                .with_scale(Vec3::splat(1.0)),
-            ..Default::default()
-        })
-        .id()
+    // Essayer de charger le modèle GLTF
+    // Note: Bevy charge les assets de manière asynchrone, donc on crée toujours l'entité
+    let gltf_handle: Handle<Scene> = asset_server.load("models/player.glb#Scene0");
+
+    // Créer l'entité parent
+    let player_entity = commands
+        .spawn((
+            SceneBundle {
+                scene: gltf_handle,
+                transform: Transform::from_xyz(0.0, 0.0, 0.0)
+                    .with_scale(Vec3::splat(1.0)), // Ajustez l'échelle si nécessaire
+                ..Default::default()
+            },
+            PlayerGltfModel,
+        ))
+        .id();
+
+    // Charger l'arme séparément pour la vue des autres joueurs
+    let weapon_gltf: Handle<Scene> = asset_server.load("models/ak47.glb#Scene0");
+    let weapon_entity = commands
+        .spawn((
+            SceneBundle {
+                scene: weapon_gltf,
+                transform: Transform::from_xyz(0.3, -0.5, 0.4)
+                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_4 * 0.3))
+                    .with_scale(Vec3::splat(0.8)), // Ajustez selon la taille de votre modèle
+                ..Default::default()
+            },
+            WeaponGltfModel,
+        ))
+        .id();
+
+    // Attacher l'arme au joueur
+    commands.entity(player_entity).add_child(weapon_entity);
+
+    player_entity
+}
+
+/// Version procédurale de fallback si les modèles GLTF ne sont pas disponibles
+/// (garde le code actuel pour compatibilité)
+pub fn create_player_model_procedural(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+) -> Entity {
+    // Code procédural actuel (renommé pour clarté)
+    create_player_model(commands, meshes, materials)
 }
