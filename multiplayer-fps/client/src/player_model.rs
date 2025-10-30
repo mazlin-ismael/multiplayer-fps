@@ -114,16 +114,15 @@ pub fn create_player_model(
                 ..Default::default()
             });
 
-            // Arme (fusil d'assaut) tenue en diagonale devant le joueur
-            // Corps principal du fusil
+            // Arme (fusil d'assaut) tenue DROITE devant le joueur
+            // Position comme si tenue au niveau de la poitrine, pointant vers l'avant
+
+            // Corps principal du fusil - horizontal, pointant devant
             parent.spawn(PbrBundle {
                 mesh: weapon_body_mesh,
                 material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.22, -0.55, 0.4)
-                    .with_rotation(
-                        Quat::from_rotation_y(std::f32::consts::FRAC_PI_4 * 0.3) // Légère rotation
-                        * Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4 * 0.5) // Incliné vers le bas
-                    ),
+                transform: Transform::from_xyz(0.2, -0.6, 0.4)
+                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)), // 90° = horizontal
                 ..Default::default()
             });
 
@@ -131,35 +130,24 @@ pub fn create_player_model(
             parent.spawn(PbrBundle {
                 mesh: weapon_barrel_mesh,
                 material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.22, -0.5, 0.75)
-                    .with_rotation(
-                        Quat::from_rotation_y(std::f32::consts::FRAC_PI_4 * 0.3)
-                        * Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4 * 0.5)
-                    ),
+                transform: Transform::from_xyz(0.2, -0.6, 0.75), // Devant le corps
                 ..Default::default()
             });
 
-            // Crosse du fusil (derrière)
+            // Crosse du fusil (derrière, au niveau de l'épaule)
             parent.spawn(PbrBundle {
                 mesh: weapon_stock_mesh,
                 material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.18, -0.58, 0.1)
-                    .with_rotation(
-                        Quat::from_rotation_y(std::f32::consts::FRAC_PI_4 * 0.3)
-                        * Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4 * 0.5)
-                    ),
+                transform: Transform::from_xyz(0.15, -0.6, 0.05) // Près de l'épaule
+                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
                 ..Default::default()
             });
 
-            // Poignée (sous le corps)
+            // Poignée (sous le corps du fusil)
             parent.spawn(PbrBundle {
                 mesh: weapon_grip_mesh,
                 material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.2, -0.65, 0.35)
-                    .with_rotation(
-                        Quat::from_rotation_y(std::f32::consts::FRAC_PI_4 * 0.3)
-                        * Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4 * 0.5)
-                    ),
+                transform: Transform::from_xyz(0.2, -0.7, 0.35), // Sous le fusil
                 ..Default::default()
             });
         })
@@ -169,28 +157,66 @@ pub fn create_player_model(
 }
 
 /// Crée une arme FPS (vue première personne) attachée à la caméra
-/// Charge le modèle GLTF rifle.glb pour cohérence avec les autres joueurs
+/// Version procédurale simple et performante
 pub fn create_fps_weapon(
     commands: &mut Commands,
-    asset_server: &Res<AssetServer>,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
 ) -> Entity {
-    // Charger le modèle GLTF de l'arme
-    let rifle_handle: Handle<Scene> = asset_server.load("models/rifle.glb#Scene0");
+    let weapon_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.15, 0.15, 0.15), // Gris foncé métallique
+        metallic: 0.9,
+        perceptual_roughness: 0.2,
+        ..Default::default()
+    });
+
+    let wood_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.4, 0.25, 0.15), // Marron bois
+        metallic: 0.0,
+        perceptual_roughness: 0.8,
+        ..Default::default()
+    });
+
+    // Meshes pour le fusil FPS
+    let weapon_body = meshes.add(Cuboid::new(0.08, 0.12, 0.7)); // Corps principal plus long
+    let weapon_barrel = meshes.add(Cuboid::new(0.05, 0.05, 0.5)); // Canon long
+    let weapon_stock = meshes.add(Cuboid::new(0.07, 0.09, 0.25)); // Crosse
 
     // Créer l'arme FPS positionnée dans le coin bas-droit de la vue
     let fps_weapon = commands
-        .spawn((
-            SceneBundle {
-                scene: rifle_handle,
-                // Position relative à la caméra
-                // X positif = droite, Y négatif = bas, Z négatif = devant la caméra
-                transform: Transform::from_xyz(0.15, -0.15, -0.3)
-                    .with_rotation(Quat::from_rotation_y(std::f32::consts::PI)) // Rotation 180° pour pointer vers l'avant
-                    .with_scale(Vec3::splat(0.05)), // Petite échelle pour vue FPS
+        .spawn(SpatialBundle {
+            // Position relative à la caméra
+            // X positif = droite, Y négatif = bas, Z négatif = devant la caméra
+            transform: Transform::from_xyz(0.25, -0.2, -0.5),
+            ..Default::default()
+        })
+        .with_children(|parent| {
+            // Corps du fusil - horizontal pointant vers l'avant
+            parent.spawn(PbrBundle {
+                mesh: weapon_body,
+                material: weapon_material.clone(),
+                transform: Transform::from_xyz(0.0, 0.0, -0.1)
+                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)), // 90° horizontal
                 ..Default::default()
-            },
-            WeaponGltfModel,
-        ))
+            });
+
+            // Canon (pointant vers l'avant)
+            parent.spawn(PbrBundle {
+                mesh: weapon_barrel,
+                material: weapon_material.clone(),
+                transform: Transform::from_xyz(0.0, 0.02, -0.5), // Devant
+                ..Default::default()
+            });
+
+            // Crosse (derrière, en bois)
+            parent.spawn(PbrBundle {
+                mesh: weapon_stock,
+                material: wood_material,
+                transform: Transform::from_xyz(0.0, 0.0, 0.3) // Derrière
+                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                ..Default::default()
+            });
+        })
         .id();
 
     fps_weapon
