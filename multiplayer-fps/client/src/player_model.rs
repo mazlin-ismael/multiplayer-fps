@@ -82,19 +82,21 @@ pub fn create_player_model(
                 ..Default::default()
             });
 
-            // Bras gauche (au niveau des épaules)
+            // Bras gauche - légèrement vers l'avant pour tenir l'arme
             parent.spawn(PbrBundle {
                 mesh: arm_mesh.clone(),
                 material: limb_material.clone(),
-                transform: Transform::from_xyz(-0.3, -0.75, 0.0),
+                transform: Transform::from_xyz(-0.25, -0.75, 0.15) // Légèrement vers l'avant
+                    .with_rotation(Quat::from_rotation_x(0.3)), // Incliné vers l'avant
                 ..Default::default()
             });
 
-            // Bras droit (avec arme)
+            // Bras droit - vers l'avant pour tenir l'arme
             parent.spawn(PbrBundle {
                 mesh: arm_mesh,
                 material: limb_material.clone(),
-                transform: Transform::from_xyz(0.3, -0.75, 0.0),
+                transform: Transform::from_xyz(0.25, -0.75, 0.15) // Légèrement vers l'avant
+                    .with_rotation(Quat::from_rotation_x(0.3)), // Incliné vers l'avant
                 ..Default::default()
             });
 
@@ -114,14 +116,14 @@ pub fn create_player_model(
                 ..Default::default()
             });
 
-            // Arme (fusil d'assaut) tenue DROITE devant le joueur
-            // Position comme si tenue au niveau de la poitrine, pointant vers l'avant
+            // Arme (fusil d'assaut) TENUE au niveau des mains
+            // Positionnée entre les bras, comme si réellement tenue à deux mains
 
-            // Corps principal du fusil - horizontal, pointant devant
+            // Corps principal du fusil - horizontal, au niveau des mains
             parent.spawn(PbrBundle {
                 mesh: weapon_body_mesh,
                 material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.2, -0.6, 0.4)
+                transform: Transform::from_xyz(0.05, -0.8, 0.4) // Centré, hauteur des mains
                     .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)), // 90° = horizontal
                 ..Default::default()
             });
@@ -130,24 +132,24 @@ pub fn create_player_model(
             parent.spawn(PbrBundle {
                 mesh: weapon_barrel_mesh,
                 material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.2, -0.6, 0.75), // Devant le corps
+                transform: Transform::from_xyz(0.05, -0.78, 0.75), // Aligné avec le corps
                 ..Default::default()
             });
 
-            // Crosse du fusil (derrière, au niveau de l'épaule)
+            // Crosse du fusil (derrière, vers l'épaule droite)
             parent.spawn(PbrBundle {
                 mesh: weapon_stock_mesh,
                 material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.15, -0.6, 0.05) // Près de l'épaule
+                transform: Transform::from_xyz(0.08, -0.78, 0.05) // Vers l'épaule
                     .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
                 ..Default::default()
             });
 
-            // Poignée (sous le corps du fusil)
+            // Poignée (sous le corps du fusil, main droite)
             parent.spawn(PbrBundle {
                 mesh: weapon_grip_mesh,
                 material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.2, -0.7, 0.35), // Sous le fusil
+                transform: Transform::from_xyz(0.05, -0.88, 0.35), // Sous le fusil, main droite
                 ..Default::default()
             });
         })
