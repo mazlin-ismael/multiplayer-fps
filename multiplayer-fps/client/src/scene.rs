@@ -115,8 +115,7 @@ pub fn spawn_map_if_received_system(
 pub fn spawn_camera_system(
     mut commands: Commands,
     current_map: Res<CurrentMap>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     if current_map.is_changed() && current_map.0.is_some() {
         let map = current_map.0.as_ref().unwrap();
@@ -126,8 +125,8 @@ pub fn spawn_camera_system(
 
         info!("Spawning player at ({}, {})", spawn_x, spawn_z);
 
-        // Créer l'arme FPS
-        let fps_weapon = create_fps_weapon(&mut commands, &mut meshes, &mut materials);
+        // Créer l'arme FPS avec le modèle GLTF
+        let fps_weapon = create_fps_weapon(&mut commands, &asset_server);
 
         // Spawner le joueur avec capsule collider + MARKER LocalPlayer
         commands.spawn((

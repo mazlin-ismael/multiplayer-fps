@@ -169,74 +169,28 @@ pub fn create_player_model(
 }
 
 /// Crée une arme FPS (vue première personne) attachée à la caméra
-/// L'arme est visible dans le coin bas-droit de l'écran comme dans un FPS classique
+/// Charge le modèle GLTF rifle.glb pour cohérence avec les autres joueurs
 pub fn create_fps_weapon(
     commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
+    asset_server: &Res<AssetServer>,
 ) -> Entity {
-    let weapon_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.15, 0.15, 0.15), // Gris foncé
-        metallic: 0.9,
-        perceptual_roughness: 0.2,
-        ..Default::default()
-    });
-
-    let handle_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.3, 0.2, 0.1), // Marron pour la crosse
-        metallic: 0.0,
-        perceptual_roughness: 0.8,
-        ..Default::default()
-    });
-
-    // Meshes pour le fusil FPS
-    let weapon_body = meshes.add(Cuboid::new(0.08, 0.12, 0.6)); // Corps principal
-    let weapon_barrel = meshes.add(Cuboid::new(0.04, 0.04, 0.4)); // Canon
-    let weapon_handle = meshes.add(Cuboid::new(0.06, 0.15, 0.08)); // Poignée
-    let weapon_stock = meshes.add(Cuboid::new(0.06, 0.08, 0.2)); // Crosse
+    // Charger le modèle GLTF de l'arme
+    let rifle_handle: Handle<Scene> = asset_server.load("models/rifle.glb#Scene0");
 
     // Créer l'arme FPS positionnée dans le coin bas-droit de la vue
     let fps_weapon = commands
-        .spawn(SpatialBundle {
-            // Position relative à la caméra
-            // X positif = droite, Y négatif = bas, Z négatif = devant la caméra
-            transform: Transform::from_xyz(0.3, -0.25, -0.5),
-            ..Default::default()
-        })
-        .with_children(|parent| {
-            // Corps du fusil
-            parent.spawn(PbrBundle {
-                mesh: weapon_body,
-                material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.0, 0.0, -0.1),
+        .spawn((
+            SceneBundle {
+                scene: rifle_handle,
+                // Position relative à la caméra
+                // X positif = droite, Y négatif = bas, Z négatif = devant la caméra
+                transform: Transform::from_xyz(0.15, -0.15, -0.3)
+                    .with_rotation(Quat::from_rotation_y(std::f32::consts::PI)) // Rotation 180° pour pointer vers l'avant
+                    .with_scale(Vec3::splat(0.05)), // Petite échelle pour vue FPS
                 ..Default::default()
-            });
-
-            // Canon (pointant vers l'avant)
-            parent.spawn(PbrBundle {
-                mesh: weapon_barrel,
-                material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.0, 0.03, -0.5),
-                ..Default::default()
-            });
-
-            // Poignée
-            parent.spawn(PbrBundle {
-                mesh: weapon_handle,
-                material: handle_material.clone(),
-                transform: Transform::from_xyz(0.0, -0.1, 0.05),
-                ..Default::default()
-            });
-
-            // Crosse
-            parent.spawn(PbrBundle {
-                mesh: weapon_stock,
-                material: handle_material.clone(),
-                transform: Transform::from_xyz(0.0, 0.0, 0.25)
-                    .with_rotation(Quat::from_rotation_x(-0.3)),
-                ..Default::default()
-            });
-        })
+            },
+            WeaponGltfModel,
+        ))
         .id();
 
     fps_weapon
@@ -273,9 +227,14 @@ pub fn create_player_model_gltf(
         .spawn((
             SceneBundle {
                 scene: weapon_gltf,
-                transform: Transform::from_xyz(0.3, -0.5, 0.4)
-                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_4 * 0.3))
-                    .with_scale(Vec3::splat(0.8)), // Ajustez selon la taille de votre modèle
+                // Position ajustée pour être tenue devant le soldat
+                // Les valeurs sont relatives au soldat (qui est à y=0)
+                transform: Transform::from_xyz(0.15, -0.4, 0.3) // Plus bas et plus près du corps
+                    .with_rotation(
+                        Quat::from_rotation_y(std::f32::consts::FRAC_PI_2) // 90° rotation Y
+                        * Quat::from_rotation_x(-0.2) // Légère inclinaison vers le bas
+                    )
+                    .with_scale(Vec3::splat(0.1)), // Échelle réduite pour éviter les "fils"
                 ..Default::default()
             },
             WeaponGltfModel,
