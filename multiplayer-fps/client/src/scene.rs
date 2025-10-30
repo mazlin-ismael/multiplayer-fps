@@ -5,6 +5,7 @@ use bevy_renet::renet::{RenetClient, DefaultChannel};
 use shared::{GameMap, ClientMessage};
 
 use crate::network::CurrentMap;
+use crate::player_model::create_fps_weapon;
 
 #[derive(Resource, Default)]
 pub struct MapSpawned(pub bool);
@@ -110,18 +111,23 @@ pub fn spawn_map_if_received_system(
     }
 }
 
-/// Spawner la caméra avec contrôleur FPS physique
+/// Spawner la caméra avec contrôleur FPS physique et arme visible
 pub fn spawn_camera_system(
     mut commands: Commands,
     current_map: Res<CurrentMap>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if current_map.is_changed() && current_map.0.is_some() {
         let map = current_map.0.as_ref().unwrap();
-        
+
         let spawn_x = map.spawn_x;
         let spawn_z = map.spawn_z;
 
         info!("Spawning player at ({}, {})", spawn_x, spawn_z);
+
+        // Créer l'arme FPS
+        let fps_weapon = create_fps_weapon(&mut commands, &mut meshes, &mut materials);
 
         // Spawner le joueur avec capsule collider + MARKER LocalPlayer
         commands.spawn((
@@ -144,7 +150,7 @@ pub fn spawn_camera_system(
                 ..default()
             },
             Velocity::default(),
-        ));
+        )).add_child(fps_weapon); // Attacher l'arme à la caméra
     }
 }
 
