@@ -8,220 +8,164 @@ pub struct PlayerGltfModel;
 #[derive(Component)]
 pub struct WeaponGltfModel;
 
-/// Crée un modèle 3D de joueur composé de plusieurs parties
-/// (tête, corps, bras, jambes) pour remplacer la simple capsule rouge
-/// Le modèle est positionné pour que les pieds touchent le sol (y=0) quand
-/// la position donnée est la position de la caméra (y=1.7)
+/// Crée un modèle 3D de TANK avec châssis, tourelle et canon
+/// Le tank roule au sol (y=0) et le canon est bien visible
 pub fn create_player_model(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,
     materials: &mut ResMut<Assets<StandardMaterial>>,
 ) -> Entity {
-    // Matériaux pour les différentes parties du corps
-    let body_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.2, 0.4, 0.8), // Bleu pour le corps
-        metallic: 0.1,
-        perceptual_roughness: 0.8,
+    // Matériaux pour le tank
+    let chassis_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.2, 0.3, 0.2), // Vert militaire pour le châssis
+        metallic: 0.6,
+        perceptual_roughness: 0.4,
         ..Default::default()
     });
 
-    let skin_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.95, 0.8, 0.7), // Couleur peau pour la tête
-        metallic: 0.0,
-        perceptual_roughness: 0.9,
+    let turret_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.25, 0.35, 0.25), // Vert légèrement plus clair
+        metallic: 0.6,
+        perceptual_roughness: 0.4,
         ..Default::default()
     });
 
-    let limb_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.15, 0.35, 0.7), // Bleu foncé pour les membres
-        metallic: 0.1,
-        perceptual_roughness: 0.8,
-        ..Default::default()
-    });
-
-    let weapon_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.1, 0.1, 0.1), // Noir pour l'arme
-        metallic: 0.8,
-        perceptual_roughness: 0.3,
-        ..Default::default()
-    });
-
-    // Meshes pour les parties du corps
-    let head_mesh = meshes.add(Sphere::new(0.15));
-    let body_mesh = meshes.add(Cuboid::new(0.4, 0.6, 0.25));
-    let arm_mesh = meshes.add(Cuboid::new(0.12, 0.5, 0.12));
-    let leg_mesh = meshes.add(Cuboid::new(0.15, 0.5, 0.15));
-
-    // Arme (fusil d'assaut) - Plus grande et visible
-    let weapon_body_mesh = meshes.add(Cuboid::new(0.1, 0.15, 0.7)); // Corps du fusil
-    let weapon_barrel_mesh = meshes.add(Cuboid::new(0.06, 0.06, 0.5)); // Canon long
-    let weapon_stock_mesh = meshes.add(Cuboid::new(0.08, 0.1, 0.25)); // Crosse
-    let weapon_grip_mesh = meshes.add(Cuboid::new(0.07, 0.15, 0.08)); // Poignée
-
-    // Entité parent pour le modèle complet
-    // Position 0,0,0 correspond à la position de la caméra (yeux à y=1.7)
-    let player_model = commands
-        .spawn(SpatialBundle {
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
-            ..Default::default()
-        })
-        .with_children(|parent| {
-            // Tête (au niveau des yeux, légèrement au-dessus)
-            parent.spawn(PbrBundle {
-                mesh: head_mesh,
-                material: skin_material.clone(),
-                transform: Transform::from_xyz(0.0, -0.2, 0.0),
-                ..Default::default()
-            });
-
-            // Corps (centré entre épaules et hanches)
-            parent.spawn(PbrBundle {
-                mesh: body_mesh,
-                material: body_material.clone(),
-                transform: Transform::from_xyz(0.0, -0.8, 0.0),
-                ..Default::default()
-            });
-
-            // Bras gauche - légèrement vers l'avant pour tenir l'arme
-            parent.spawn(PbrBundle {
-                mesh: arm_mesh.clone(),
-                material: limb_material.clone(),
-                transform: Transform::from_xyz(-0.25, -0.75, 0.15) // Légèrement vers l'avant
-                    .with_rotation(Quat::from_rotation_x(0.3)), // Incliné vers l'avant
-                ..Default::default()
-            });
-
-            // Bras droit - vers l'avant pour tenir l'arme
-            parent.spawn(PbrBundle {
-                mesh: arm_mesh,
-                material: limb_material.clone(),
-                transform: Transform::from_xyz(0.25, -0.75, 0.15) // Légèrement vers l'avant
-                    .with_rotation(Quat::from_rotation_x(0.3)), // Incliné vers l'avant
-                ..Default::default()
-            });
-
-            // Jambe gauche
-            parent.spawn(PbrBundle {
-                mesh: leg_mesh.clone(),
-                material: limb_material.clone(),
-                transform: Transform::from_xyz(-0.12, -1.45, 0.0),
-                ..Default::default()
-            });
-
-            // Jambe droite
-            parent.spawn(PbrBundle {
-                mesh: leg_mesh,
-                material: limb_material.clone(),
-                transform: Transform::from_xyz(0.12, -1.45, 0.0),
-                ..Default::default()
-            });
-
-            // Arme (fusil d'assaut) TENUE au niveau des mains
-            // Positionnée entre les bras, comme si réellement tenue à deux mains
-
-            // Corps principal du fusil - horizontal, au niveau des mains
-            parent.spawn(PbrBundle {
-                mesh: weapon_body_mesh,
-                material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.05, -0.8, 0.4) // Centré, hauteur des mains
-                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)), // 90° = horizontal
-                ..Default::default()
-            });
-
-            // Canon long pointant vers l'avant
-            parent.spawn(PbrBundle {
-                mesh: weapon_barrel_mesh,
-                material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.05, -0.78, 0.75), // Aligné avec le corps
-                ..Default::default()
-            });
-
-            // Crosse du fusil (derrière, vers l'épaule droite)
-            parent.spawn(PbrBundle {
-                mesh: weapon_stock_mesh,
-                material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.08, -0.78, 0.05) // Vers l'épaule
-                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
-                ..Default::default()
-            });
-
-            // Poignée (sous le corps du fusil, main droite)
-            parent.spawn(PbrBundle {
-                mesh: weapon_grip_mesh,
-                material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.05, -0.88, 0.35), // Sous le fusil, main droite
-                ..Default::default()
-            });
-        })
-        .id();
-
-    player_model
-}
-
-/// Crée une arme FPS (vue première personne) attachée à la caméra
-/// Version procédurale simple et performante
-pub fn create_fps_weapon(
-    commands: &mut Commands,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
-) -> Entity {
-    let weapon_material = materials.add(StandardMaterial {
+    let cannon_material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.15, 0.15, 0.15), // Gris foncé métallique
         metallic: 0.9,
         perceptual_roughness: 0.2,
         ..Default::default()
     });
 
-    let wood_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.4, 0.25, 0.15), // Marron bois
-        metallic: 0.0,
+    let track_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.1, 0.1, 0.1), // Noir pour les chenilles
+        metallic: 0.3,
         perceptual_roughness: 0.8,
         ..Default::default()
     });
 
-    // Meshes pour le fusil FPS
-    let weapon_body = meshes.add(Cuboid::new(0.08, 0.12, 0.7)); // Corps principal plus long
-    let weapon_barrel = meshes.add(Cuboid::new(0.05, 0.05, 0.5)); // Canon long
-    let weapon_stock = meshes.add(Cuboid::new(0.07, 0.09, 0.25)); // Crosse
+    // Meshes pour le tank
+    let chassis_mesh = meshes.add(Cuboid::new(1.2, 0.4, 1.8)); // Châssis principal (large, bas, long)
+    let turret_mesh = meshes.add(Cuboid::new(0.8, 0.5, 0.8)); // Tourelle sur le dessus
+    let cannon_mesh = meshes.add(Cuboid::new(0.12, 0.12, 1.4)); // Canon long
+    let track_left_mesh = meshes.add(Cuboid::new(0.15, 0.3, 1.8)); // Chenille gauche
+    let track_right_mesh = meshes.add(Cuboid::new(0.15, 0.3, 1.8)); // Chenille droite
 
-    // Créer l'arme FPS positionnée dans le coin bas-droit de la vue
-    let fps_weapon = commands
+    // Entité parent pour le tank complet
+    // Position 0,0,0 correspond à la position de la caméra (cockpit)
+    let tank_model = commands
         .spawn(SpatialBundle {
-            // Position relative à la caméra
-            // X positif = droite, Y négatif = bas, Z négatif = devant la caméra
-            transform: Transform::from_xyz(0.25, -0.2, -0.5),
+            transform: Transform::from_xyz(0.0, 0.0, 0.0),
             ..Default::default()
         })
         .with_children(|parent| {
-            // Corps du fusil - horizontal pointant vers l'avant
+            // Châssis principal - au sol
             parent.spawn(PbrBundle {
-                mesh: weapon_body,
-                material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.0, 0.0, -0.1)
-                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)), // 90° horizontal
+                mesh: chassis_mesh,
+                material: chassis_material.clone(),
+                transform: Transform::from_xyz(0.0, -1.3, 0.0), // Bas, au niveau du sol
                 ..Default::default()
             });
 
-            // Canon (pointant vers l'avant)
+            // Chenille gauche
             parent.spawn(PbrBundle {
-                mesh: weapon_barrel,
-                material: weapon_material.clone(),
-                transform: Transform::from_xyz(0.0, 0.02, -0.5), // Devant
+                mesh: track_left_mesh,
+                material: track_material.clone(),
+                transform: Transform::from_xyz(-0.65, -1.3, 0.0), // Côté gauche
                 ..Default::default()
             });
 
-            // Crosse (derrière, en bois)
+            // Chenille droite
             parent.spawn(PbrBundle {
-                mesh: weapon_stock,
-                material: wood_material,
-                transform: Transform::from_xyz(0.0, 0.0, 0.3) // Derrière
-                    .with_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_2)),
+                mesh: track_right_mesh,
+                material: track_material.clone(),
+                transform: Transform::from_xyz(0.65, -1.3, 0.0), // Côté droit
+                ..Default::default()
+            });
+
+            // Tourelle - sur le dessus du châssis
+            parent.spawn(PbrBundle {
+                mesh: turret_mesh,
+                material: turret_material.clone(),
+                transform: Transform::from_xyz(0.0, -0.9, 0.0), // Sur le châssis
+                ..Default::default()
+            });
+
+            // CANON - Long, pointant vers l'avant, bien visible !
+            parent.spawn(PbrBundle {
+                mesh: cannon_mesh,
+                material: cannon_material.clone(),
+                transform: Transform::from_xyz(0.0, -0.85, 1.0), // Devant, légèrement en haut
                 ..Default::default()
             });
         })
         .id();
 
-    fps_weapon
+    tank_model
+}
+
+/// Crée un canon de tank visible en vue FPS
+/// Le canon du tank est visible en bas de l'écran
+pub fn create_fps_weapon(
+    commands: &mut Commands,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    materials: &mut ResMut<Assets<StandardMaterial>>,
+) -> Entity {
+    let cannon_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.15, 0.15, 0.15), // Gris foncé métallique
+        metallic: 0.9,
+        perceptual_roughness: 0.2,
+        ..Default::default()
+    });
+
+    let turret_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.2, 0.3, 0.2), // Vert militaire
+        metallic: 0.6,
+        perceptual_roughness: 0.4,
+        ..Default::default()
+    });
+
+    // Meshes pour le canon de tank en vue FPS
+    let cannon_mesh = meshes.add(Cuboid::new(0.1, 0.1, 1.2)); // Canon long et épais
+    let cannon_base_mesh = meshes.add(Cuboid::new(0.15, 0.15, 0.2)); // Base du canon
+    let turret_edge_mesh = meshes.add(Cuboid::new(0.5, 0.08, 0.3)); // Bord de la tourelle visible
+
+    // Créer le canon FPS positionné en bas de la vue
+    let fps_cannon = commands
+        .spawn(SpatialBundle {
+            // Position relative à la caméra
+            // En bas au centre pour voir le canon pointer devant
+            transform: Transform::from_xyz(0.0, -0.3, -0.4),
+            ..Default::default()
+        })
+        .with_children(|parent| {
+            // Canon principal - long, pointant vers l'avant
+            parent.spawn(PbrBundle {
+                mesh: cannon_mesh,
+                material: cannon_material.clone(),
+                transform: Transform::from_xyz(0.0, 0.0, -0.6), // Devant
+                ..Default::default()
+            });
+
+            // Base du canon (sortie de la tourelle)
+            parent.spawn(PbrBundle {
+                mesh: cannon_base_mesh,
+                material: turret_material.clone(),
+                transform: Transform::from_xyz(0.0, 0.0, 0.1), // Juste derrière
+                ..Default::default()
+            });
+
+            // Bord de la tourelle visible en bas de l'écran
+            parent.spawn(PbrBundle {
+                mesh: turret_edge_mesh,
+                material: turret_material,
+                transform: Transform::from_xyz(0.0, -0.1, 0.2), // En bas, large
+                ..Default::default()
+            });
+        })
+        .id();
+
+    fps_cannon
 }
 
 /// Crée un joueur avec modèle GLTF (soldat masqué)
