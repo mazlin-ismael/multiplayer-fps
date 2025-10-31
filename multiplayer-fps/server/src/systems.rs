@@ -20,12 +20,9 @@ pub fn handle_connection_events(
                     
                     // Ajouter le joueur et obtenir son ID
                     let player_id = registry.add_player(client_id_u64, name.clone(), &mut commands);
-                    
-                    // Obtenir l'index de spawn pour ce joueur
-                    let spawn_index = registry.get_spawn_index(player_id).unwrap_or(0);
-                    
-                    // Créer une map avec la position de spawn spécifique
-                    let map = GameMap::from_global().with_spawn_position(spawn_index);
+
+                    // Créer une map avec une position de spawn aléatoire
+                    let map = GameMap::from_global().with_random_spawn();
                     
                     println!("Sending map to client {} (Player ID: {}):", client_id_u64, player_id);
                     map.display();
@@ -333,22 +330,20 @@ fn perform_raycast_hit(
                     // Le tueur récupère 1 point de vie
                     players.heal_player(shooter_id, 1);
 
-                    // Respawn le joueur mort
-                    if let Some(spawn_index) = players.get_spawn_index(hit_id) {
-                        let respawn_map = GameMap::from_global().with_spawn_position(spawn_index);
-                        let spawn_pos = [respawn_map.spawn_x, 1.7, respawn_map.spawn_z];
-                        players.respawn_player(hit_id, spawn_pos);
+                    // Respawn le joueur mort avec position aléatoire
+                    let respawn_map = GameMap::from_global().with_random_spawn();
+                    let spawn_pos = [respawn_map.spawn_x, 1.7, respawn_map.spawn_z];
+                    players.respawn_player(hit_id, spawn_pos);
 
-                        // Informer tous les clients du respawn
-                        let respawn_message = ServerMessage::PlayerRespawned {
-                            player_id: hit_id,
-                            position: spawn_pos,
-                            health: 3,
-                        };
+                    // Informer tous les clients du respawn
+                    let respawn_message = ServerMessage::PlayerRespawned {
+                        player_id: hit_id,
+                        position: spawn_pos,
+                        health: 3,
+                    };
 
-                        for client_id in server.clients_id() {
-                            server.send_message(client_id, DefaultChannel::ReliableOrdered, respawn_message.to_bytes());
-                        }
+                    for client_id in server.clients_id() {
+                        server.send_message(client_id, DefaultChannel::ReliableOrdered, respawn_message.to_bytes());
                     }
                 }
             }

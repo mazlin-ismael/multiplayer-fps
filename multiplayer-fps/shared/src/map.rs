@@ -71,6 +71,54 @@ impl GameMap {
         }
     }
 
+    // Crée une map avec une position de spawn aléatoire
+    pub fn with_random_spawn(mut self) -> Self {
+        // Générer un spawn aléatoire dans une zone libre
+        // On cherche dans toute la map une position où tiles[y][x] == Floor
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let mut rng_seed = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64;
+
+        // Simple LCG pour générer des nombres aléatoires
+        fn rand(seed: &mut u64) -> u64 {
+            *seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            *seed
+        }
+
+        // Trouver toutes les positions libres (Floor)
+        let mut free_positions = Vec::new();
+        for y in 1..(self.height - 1) {
+            for x in 1..(self.width - 1) {
+                if self.tiles[y][x] as u8 == 0 { // Floor
+                    // Vérifier que c'est pas trop près d'un mur (au moins 1 case de marge)
+                    let safe = self.tiles[y-1][x] as u8 == 0
+                            && self.tiles[y+1][x] as u8 == 0
+                            && self.tiles[y][x-1] as u8 == 0
+                            && self.tiles[y][x+1] as u8 == 0;
+                    if safe {
+                        free_positions.push((x as f32 + 0.5, y as f32 + 0.5));
+                    }
+                }
+            }
+        }
+
+        if !free_positions.is_empty() {
+            let index = (rand(&mut rng_seed) as usize) % free_positions.len();
+            let (x, z) = free_positions[index];
+            self.spawn_x = x;
+            self.spawn_z = z;
+        } else {
+            // Fallback au centre si aucune position libre trouvée
+            self.spawn_x = 10.0;
+            self.spawn_z = 10.0;
+        }
+
+        self
+    }
+
     // Crée une map avec une position de spawn spécifique
     pub fn with_spawn_position(mut self, spawn_index: usize) -> Self {
         // Positions de spawn prédéfinies (espaces libres)
