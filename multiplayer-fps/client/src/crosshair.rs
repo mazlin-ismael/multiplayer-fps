@@ -21,10 +21,10 @@ pub fn setup_crosshair(
 
     spawned.0 = true;
 
-    // Paramètres du crosshair - lignes longues avec petit espace
-    const LINE_LENGTH: f32 = 18.0;  // Longueur de chaque segment
+    // Paramètres du crosshair - traits courts avec léger espace
+    const LINE_LENGTH: f32 = 12.0;  // Longueur de chaque segment (plus court)
     const LINE_THICKNESS: f32 = 2.0; // Épaisseur
-    const GAP: f32 = 2.0;           // Petit espace au centre
+    const GAP: f32 = 3.0;           // Léger espace au centre
 
     // Créer le crosshair au centre de l'écran
     commands
