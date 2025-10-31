@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use bevy::prelude::Resource;
 
 // Represents a tile type: Floor or Wall
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -15,7 +16,7 @@ impl TileType {
 }
 
 // Structure that contains the entire map
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Resource)]
 pub struct GameMap {
     pub width: usize,
     pub height: usize,
