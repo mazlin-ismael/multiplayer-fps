@@ -31,7 +31,7 @@ pub fn receive_other_players_system(
     mut other_players: ResMut<OtherPlayers>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut player_query: Query<(&Transform, &mut OtherPlayer)>,
+    mut player_query: Query<&mut OtherPlayer>,
     children_query: Query<&Children>,
     mut transform_query: Query<&mut Transform>,
     turret_query: Query<Entity, With<TankTurret>>,
@@ -122,7 +122,7 @@ pub fn receive_other_players_system(
                     // Mettre à jour la santé et ajouter l'effet de flash rouge
                     if let Some(&entity) = other_players.players.get(&player_id) {
                         // Mettre à jour la santé
-                        if let Ok((_, mut other_player)) = player_query.get_mut(entity) {
+                        if let Ok(mut other_player) = player_query.get_mut(entity) {
                             other_player.health = new_health;
                         }
 
@@ -148,7 +148,7 @@ pub fn receive_other_players_system(
                         if let Ok(mut tank_transform) = transform_query.get_mut(entity) {
                             tank_transform.translation = Vec3::new(position[0], position[1], position[2]);
                         }
-                        if let Ok((_, mut other_player)) = player_query.get_mut(entity) {
+                        if let Ok(mut other_player) = player_query.get_mut(entity) {
                             other_player.health = health;
                         }
 
