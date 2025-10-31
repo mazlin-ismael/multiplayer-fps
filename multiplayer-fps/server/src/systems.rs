@@ -203,7 +203,7 @@ fn perform_raycast_hit(
                 continue;
             }
 
-            // Hitbox du tank - SYSTÈME DE HITBOX COMPOSITE (2 boîtes)
+            // Hitbox du tank - SYSTÈME DE HITBOX COMPOSITE (4 boîtes)
             // Position joueur à y=1.7 (caméra)
 
             let player_x = player_state.position[0];
@@ -240,24 +240,61 @@ fn perform_raycast_hit(
                           && turret_dy < turret_half_height
                           && turret_dz < turret_half_depth;
 
+            // CHENILLE GAUCHE: Cuboid(0.15, 0.3, 1.8) à x=-0.65, y=-1.3
+            let track_left_center = Vec3::new(player_x - 0.65, player_y - 1.3, player_z);
+            let track_half_width = 0.075;   // 0.15m total
+            let track_half_height = 0.15;   // 0.3m total
+            let track_half_depth = 0.9;     // 1.8m total
+
+            let track_left_dx = (current_pos.x - track_left_center.x).abs();
+            let track_left_dy = (current_pos.y - track_left_center.y).abs();
+            let track_left_dz = (current_pos.z - track_left_center.z).abs();
+
+            let hit_track_left = track_left_dx < track_half_width
+                              && track_left_dy < track_half_height
+                              && track_left_dz < track_half_depth;
+
+            // CHENILLE DROITE: Cuboid(0.15, 0.3, 1.8) à x=0.65, y=-1.3
+            let track_right_center = Vec3::new(player_x + 0.65, player_y - 1.3, player_z);
+
+            let track_right_dx = (current_pos.x - track_right_center.x).abs();
+            let track_right_dy = (current_pos.y - track_right_center.y).abs();
+            let track_right_dz = (current_pos.z - track_right_center.z).abs();
+
+            let hit_track_right = track_right_dx < track_half_width
+                               && track_right_dy < track_half_height
+                               && track_right_dz < track_half_depth;
+
             // Debug: afficher quand on est à moins de 3m du joueur
-            if (chassis_dx < 3.0 && chassis_dz < 3.0 || turret_dx < 3.0 && turret_dz < 3.0) && steps % 20 == 0 {
+            if (chassis_dx < 3.0 && chassis_dz < 3.0) && steps % 20 == 0 {
                 println!("  Step {}: Near player {} | ray=[{:.2}, {:.2}, {:.2}]", steps, player_id, current_pos.x, current_pos.y, current_pos.z);
-                println!("    Chassis center=[{:.2}, {:.2}, {:.2}] | dx={:.2} dy={:.2} dz={:.2}",
-                    chassis_center.x, chassis_center.y, chassis_center.z, chassis_dx, chassis_dy, chassis_dz);
-                println!("    Turret center=[{:.2}, {:.2}, {:.2}] | dx={:.2} dy={:.2} dz={:.2}",
-                    turret_center.x, turret_center.y, turret_center.z, turret_dx, turret_dy, turret_dz);
+                println!("    Chassis: dx={:.2} dy={:.2} dz={:.2}", chassis_dx, chassis_dy, chassis_dz);
+                println!("    Turret: dx={:.2} dy={:.2} dz={:.2}", turret_dx, turret_dy, turret_dz);
+                println!("    TrackL: dx={:.2} dy={:.2} dz={:.2}", track_left_dx, track_left_dy, track_left_dz);
+                println!("    TrackR: dx={:.2} dy={:.2} dz={:.2}", track_right_dx, track_right_dy, track_right_dz);
             }
 
-            if hit_chassis || hit_turret {
+            if hit_chassis || hit_turret || hit_track_left || hit_track_right {
                 // TOUCHÉ!
-                let hit_part = if hit_chassis && hit_turret { "BOTH" } else if hit_chassis { "CHASSIS" } else { "TURRET" };
+                let mut parts = Vec::new();
+                if hit_chassis { parts.push("CHASSIS"); }
+                if hit_turret { parts.push("TURRET"); }
+                if hit_track_left { parts.push("TRACK_L"); }
+                if hit_track_right { parts.push("TRACK_R"); }
+                let hit_part = parts.join("+");
+
                 println!(">>> HIT! Player {} ({}) at ray={:?}", player_id, hit_part, current_pos);
                 if hit_chassis {
                     println!("    Chassis: dx={:.2} dy={:.2} dz={:.2}", chassis_dx, chassis_dy, chassis_dz);
                 }
                 if hit_turret {
                     println!("    Turret: dx={:.2} dy={:.2} dz={:.2}", turret_dx, turret_dy, turret_dz);
+                }
+                if hit_track_left {
+                    println!("    TrackL: dx={:.2} dy={:.2} dz={:.2}", track_left_dx, track_left_dy, track_left_dz);
+                }
+                if hit_track_right {
+                    println!("    TrackR: dx={:.2} dy={:.2} dz={:.2}", track_right_dx, track_right_dy, track_right_dz);
                 }
                 hit_player_id = Some(*player_id);
                 break; // Sortir de la boucle
