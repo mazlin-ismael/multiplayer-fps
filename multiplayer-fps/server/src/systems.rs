@@ -3,12 +3,50 @@ use bevy_renet::renet::{transport::NetcodeServerTransport, DefaultChannel, Renet
 use crate::player::{PlayerRegistry, extract_name_from_user_data};
 use shared::{GameMap, ClientMessage, ServerMessage};
 
+// Resource pour gérer la rotation équitable des spawns
+#[derive(Resource)]
+pub struct SpawnRotation {
+    pub next_index: usize,
+    pub last_used_index: Option<usize>,
+}
+
+impl Default for SpawnRotation {
+    fn default() -> Self {
+        Self {
+            next_index: 0,
+            last_used_index: None,
+        }
+    }
+}
+
+impl SpawnRotation {
+    // Obtient le prochain spawn disponible (évite le dernier utilisé si possible)
+    pub fn get_next_spawn(&mut self) -> usize {
+        let total_spawns = shared::SPAWN_POINTS.len();
+
+        // Si on a plus de 1 spawn et qu'on essaie de réutiliser le dernier
+        if total_spawns > 1 && Some(self.next_index) == self.last_used_index {
+            // Avancer au suivant
+            self.next_index = (self.next_index + 1) % total_spawns;
+        }
+
+        let spawn_index = self.next_index;
+        self.last_used_index = Some(spawn_index);
+
+        // Préparer le prochain
+        self.next_index = (self.next_index + 1) % total_spawns;
+
+        spawn_index
+    }
+}
+
 pub fn handle_connection_events(
     mut events: EventReader<ServerEvent>,
     mut registry: ResMut<PlayerRegistry>,
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
     transport: Res<NetcodeServerTransport>,
+    mut spawn_rotation: ResMut<SpawnRotation>,
 ) {
     for event in events.read() {
         match event {
@@ -21,8 +59,12 @@ pub fn handle_connection_events(
                     // Ajouter le joueur et obtenir son ID
                     let player_id = registry.add_player(client_id_u64, name.clone(), &mut commands);
 
-                    // Créer une map avec une position de spawn aléatoire
-                    let map = GameMap::from_global().with_random_spawn();
+                    // Obtenir le prochain spawn par rotation
+                    let spawn_index = spawn_rotation.get_next_spawn();
+                    println!("Player {} spawning at spawn point #{}", player_id, spawn_index + 1);
+
+                    // Créer une map avec le spawn point sélectionné
+                    let map = GameMap::from_global().with_spawn_from_rotation(spawn_index);
                     
                     println!("Sending map to client {} (Player ID: {}):", client_id_u64, player_id);
                     map.display();
@@ -83,6 +125,7 @@ pub fn handle_player_messages(
     mut server: ResMut<RenetServer>,
     mut registry: ResMut<PlayerRegistry>,
     map: Res<GameMap>,
+    mut spawn_rotation: ResMut<SpawnRotation>,
 ) {
     // Pour chaque client connecté
     for client_id in server.clients_id() {
@@ -141,6 +184,7 @@ pub fn handle_player_messages(
                                 &mut registry,
                                 &map,
                                 &mut server,
+                                &mut spawn_rotation,
                             );
                         }
                     }
@@ -158,6 +202,7 @@ fn perform_raycast_hit(
     players: &mut ResMut<PlayerRegistry>,
     map: &Res<GameMap>,
     server: &mut ResMut<RenetServer>,
+    spawn_rotation: &mut ResMut<SpawnRotation>,
 ) {
     const MAX_RAYCAST_DISTANCE: f32 = 1000.0; // Portée maximale
     const STEP_SIZE: f32 = 0.05; // Précision du raycast augmentée (5cm au lieu de 10cm)
@@ -330,8 +375,11 @@ fn perform_raycast_hit(
                     // Le tueur récupère 1 point de vie
                     players.heal_player(shooter_id, 1);
 
-                    // Respawn le joueur mort avec position aléatoire
-                    let respawn_map = GameMap::from_global().with_random_spawn();
+                    // Respawn le joueur mort avec rotation des spawns
+                    let spawn_index = spawn_rotation.get_next_spawn();
+                    println!("Player {} respawning at spawn point #{}", hit_id, spawn_index + 1);
+
+                    let respawn_map = GameMap::from_global().with_spawn_from_rotation(spawn_index);
                     let spawn_pos = [respawn_map.spawn_x, 1.7, respawn_map.spawn_z];
                     players.respawn_player(hit_id, spawn_pos);
 
