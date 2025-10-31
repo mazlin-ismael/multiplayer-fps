@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_renet::renet::{transport::NetcodeServerTransport, DefaultChannel, RenetServer, ServerEvent};
-use crate::player::{PlayerRegistry, ProjectileRegistry, extract_name_from_user_data};
+use crate::player::{PlayerRegistry, extract_name_from_user_data};
 use shared::{GameMap, ClientMessage, ServerMessage};
 
 pub fn handle_connection_events(
@@ -85,7 +85,7 @@ pub fn handle_connection_events(
 pub fn handle_player_messages(
     mut server: ResMut<RenetServer>,
     mut registry: ResMut<PlayerRegistry>,
-    mut projectiles: ResMut<ProjectileRegistry>,
+    map: Res<GameMap>,
 ) {
     // Pour chaque client connecté
     for client_id in server.clients_id() {
@@ -263,140 +263,4 @@ fn perform_raycast_hit(
     }
 
     println!("Raycast missed - max distance reached");
-}
-
-// ANCIEN système de projectiles - maintenant inutilisé
-pub fn _old_update_projectiles_system(
-    time: Res<Time>,
-    mut server: ResMut<RenetServer>,
-    mut projectiles: ResMut<ProjectileRegistry>,
-    mut players: ResMut<PlayerRegistry>,
-    map: Res<GameMap>,
-) {
-    let dt = time.delta_seconds();
-    let mut projectiles_to_remove = Vec::new();
-    let mut damage_events = Vec::new(); // (projectile_id, hit_player_id, shooter_id)
-
-    // Mettre à jour tous les projectiles
-    for (projectile_id, projectile) in projectiles.projectiles.iter_mut() {
-        // Déplacer le projectile
-        projectile.position += projectile.velocity * dt;
-        projectile.lifetime -= dt;
-
-        // Vérifier si le projectile est expiré
-        if projectile.lifetime <= 0.0 {
-            projectiles_to_remove.push(*projectile_id);
-            continue;
-        }
-
-        // Vérifier collision avec les murs
-        let tile_x = projectile.position.x.floor() as i32;
-        let tile_z = projectile.position.z.floor() as i32;
-
-        if tile_x >= 0 && tile_x < map.width as i32 && tile_z >= 0 && tile_z < map.height as i32 {
-            let tile = map.tiles[tile_z as usize][tile_x as usize];
-            if tile as u8 == 1 { // Mur
-                println!("Projectile {} hit wall at ({}, {})", projectile_id, tile_x, tile_z);
-                projectiles_to_remove.push(*projectile_id);
-                continue;
-            }
-        } else {
-            // Le projectile est sorti de la map
-            projectiles_to_remove.push(*projectile_id);
-            continue;
-        }
-
-        // Vérifier les collisions avec les joueurs
-        for (player_id, player_state) in players.players.iter() {
-            // Ne pas toucher le tireur
-            if *player_id == projectile.shooter_id {
-                continue;
-            }
-
-            // Hitbox réaliste: boîte englobante du tank (1.2 x 1.5 x 1.8)
-            // Le tank fait environ 1.2m de large, 1.5m de haut, 1.8m de long
-            let player_pos = Vec3::new(
-                player_state.position[0],
-                player_state.position[1],
-                player_state.position[2],
-            );
-
-            // Vérifier collision AABB (Axis-Aligned Bounding Box)
-            let half_width = 0.8;  // 1.2m / 2 + marge
-            let half_height = 0.9; // 1.5m / 2 + marge (de -0.9 à +0.6 depuis le centre)
-            let half_depth = 1.0;  // 1.8m / 2 + marge
-
-            let dx = (projectile.position.x - player_pos.x).abs();
-            let dy = (projectile.position.y - player_pos.y).abs();
-            let dz = (projectile.position.z - player_pos.z).abs();
-
-            if dx < half_width && dy < half_height && dz < half_depth {
-                // Collision détectée!
-                println!("Projectile {} hit player {} at {:?}", projectile_id, player_id, projectile.position);
-                damage_events.push((*projectile_id, *player_id, projectile.shooter_id));
-                projectiles_to_remove.push(*projectile_id);
-                break;
-            }
-        }
-    }
-
-    // Traiter les événements de dommage
-    for (projectile_id, hit_player_id, shooter_id) in damage_events {
-        // Infliger 1 point de dégâts
-        if let Some((new_health, is_dead)) = players.damage_player(hit_player_id, 1) {
-            // Informer tous les clients des dégâts
-            let damage_message = ServerMessage::PlayerDamaged {
-                player_id: hit_player_id,
-                new_health,
-                attacker_id: shooter_id,
-            };
-
-            for client_id in server.clients_id() {
-                server.send_message(client_id, DefaultChannel::ReliableOrdered, damage_message.to_bytes());
-            }
-
-            // Si le joueur est mort
-            if is_dead {
-                println!("Player {} was killed by player {}", hit_player_id, shooter_id);
-
-                // Informer tous les clients de la mort
-                let death_message = ServerMessage::PlayerDied {
-                    player_id: hit_player_id,
-                    killer_id: shooter_id,
-                };
-
-                for client_id in server.clients_id() {
-                    server.send_message(client_id, DefaultChannel::ReliableOrdered, death_message.to_bytes());
-                }
-
-                // Le tueur récupère 1 point de vie
-                players.heal_player(shooter_id, 1);
-                println!("Player {} healed after kill", shooter_id);
-
-                // Respawn le joueur mort après 3 secondes (pour l'instant immédiat)
-                // TODO: Ajouter un timer de respawn
-                if let Some(spawn_index) = players.get_spawn_index(hit_player_id) {
-                    let map = GameMap::from_global().with_spawn_position(spawn_index);
-                    let spawn_pos = [map.spawn_x, 1.7, map.spawn_z];
-                    players.respawn_player(hit_player_id, spawn_pos);
-
-                    // Informer tous les clients du respawn
-                    let respawn_message = ServerMessage::PlayerRespawned {
-                        player_id: hit_player_id,
-                        position: spawn_pos,
-                        health: 3,
-                    };
-
-                    for client_id in server.clients_id() {
-                        server.send_message(client_id, DefaultChannel::ReliableOrdered, respawn_message.to_bytes());
-                    }
-                }
-            }
-        }
-    }
-
-    // Supprimer les projectiles qui ont été détruits
-    for projectile_id in projectiles_to_remove {
-        projectiles.projectiles.remove(&projectile_id);
-    }
 }

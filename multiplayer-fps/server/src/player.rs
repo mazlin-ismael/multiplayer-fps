@@ -3,39 +3,6 @@ use shared::PlayerBundle;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
-pub struct Projectile {
-    pub id: u64,
-    pub shooter_id: u64,
-    pub position: Vec3,
-    pub velocity: Vec3,
-    pub lifetime: f32,
-}
-
-#[derive(Resource, Default)]
-pub struct ProjectileRegistry {
-    pub projectiles: HashMap<u64, Projectile>,
-    pub next_id: u64,
-}
-
-impl ProjectileRegistry {
-    pub fn spawn_projectile(&mut self, shooter_id: u64, position: Vec3, direction: Vec3) -> u64 {
-        let projectile_id = self.next_id;
-        self.next_id += 1;
-
-        let projectile = Projectile {
-            id: projectile_id,
-            shooter_id,
-            position,
-            velocity: direction.normalize() * 50.0, // 50 m/s
-            lifetime: 5.0, // 5 secondes
-        };
-
-        self.projectiles.insert(projectile_id, projectile);
-        projectile_id
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct PlayerState {
     pub entity: Entity,
     pub name: String,
