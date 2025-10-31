@@ -12,6 +12,89 @@ pub struct VisualProjectile {
     pub lifetime: Timer,
 }
 
+// Resource pour gérer le cooldown de tir
+#[derive(Resource)]
+pub struct ShootCooldown {
+    pub timer: Timer,
+}
+
+impl Default for ShootCooldown {
+    fn default() -> Self {
+        let mut timer = Timer::from_seconds(0.5, TimerMode::Once);
+        timer.set_elapsed(timer.duration()); // Commence prêt
+        Self { timer }
+    }
+}
+
+// Marker pour l'indicateur de reload UI
+#[derive(Component)]
+pub struct ReloadIndicator;
+
+// Système pour créer l'indicateur de reload
+pub fn setup_reload_indicator(mut commands: Commands) {
+    // Barre de reload en bas au centre de l'écran
+    commands.spawn(NodeBundle {
+        style: Style {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::FlexEnd,
+            padding: UiRect::bottom(Val::Px(80.0)), // 80px du bas
+            ..default()
+        },
+        ..default()
+    })
+    .with_children(|parent| {
+        // Conteneur de la barre
+        parent.spawn(NodeBundle {
+            style: Style {
+                width: Val::Px(150.0),
+                height: Val::Px(8.0),
+                border: UiRect::all(Val::Px(2.0)),
+                ..default()
+            },
+            background_color: Color::srgba(0.1, 0.1, 0.1, 0.8).into(),
+            border_color: Color::srgb(0.3, 0.3, 0.3).into(),
+            ..default()
+        })
+        .with_children(|bar_parent| {
+            // Barre de progression
+            bar_parent.spawn((
+                NodeBundle {
+                    style: Style {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(100.0),
+                        ..default()
+                    },
+                    background_color: Color::srgb(0.0, 0.8, 0.2).into(), // Vert
+                    ..default()
+                },
+                ReloadIndicator,
+            ));
+        });
+    });
+}
+
+// Système pour mettre à jour l'indicateur de reload
+pub fn update_reload_indicator(
+    cooldown: Res<ShootCooldown>,
+    mut query: Query<(&mut Style, &mut BackgroundColor), With<ReloadIndicator>>,
+) {
+    if let Ok((mut style, mut color)) = query.get_single_mut() {
+        let progress = cooldown.timer.fraction();
+
+        // Largeur de la barre = progression
+        style.width = Val::Percent(progress * 100.0);
+
+        // Couleur: rouge si pas prêt, vert si prêt
+        if cooldown.timer.finished() {
+            *color = Color::srgb(0.0, 0.8, 0.2).into(); // Vert
+        } else {
+            *color = Color::srgb(0.8, 0.2, 0.0).into(); // Rouge
+        }
+    }
+}
+
 // Système pour tirer quand on clique (raycast instantané)
 pub fn shoot_system(
     mut commands: Commands,
@@ -21,7 +104,12 @@ pub fn shoot_system(
     windows: Query<&Window>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    time: Res<Time>,
+    mut cooldown: ResMut<ShootCooldown>,
 ) {
+    // Mettre à jour le timer
+    cooldown.timer.tick(time.delta());
+
     // Vérifier que le curseur est verrouillé
     let cursor_locked = windows
         .get_single()
@@ -32,7 +120,11 @@ pub fn shoot_system(
         return;
     }
 
-    if mouse_button.just_pressed(MouseButton::Left) {
+    // Vérifier le cooldown ET le clic
+    if mouse_button.just_pressed(MouseButton::Left) && cooldown.timer.finished() {
+        // Réinitialiser le timer
+        cooldown.timer.reset();
+
         for (transform, controller) in query.iter() {
             // IMPORTANT: Le tir part du CENTRE DE L'ÉCRAN (où est le crosshair)
             // Le canon visible en bas de l'écran est purement esthétique

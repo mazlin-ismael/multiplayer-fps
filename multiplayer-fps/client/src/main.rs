@@ -15,7 +15,7 @@ use input::{get_server_address, get_player_name};
 use network::{create_network_resources, check_connection, ConnectionState, CurrentMap, receive_map_system};
 use scene::{MapSpawned, spawn_map_if_received_system, spawn_camera_system, fps_controller_system, NetworkUpdateTimer, send_player_movement_system};
 use other_players::{OtherPlayers, receive_other_players_system, damage_flash_system}; // NOUVEAU
-use shooting::{shoot_system, update_visual_projectiles}; // Système de tir (raycast)
+use shooting::{shoot_system, update_visual_projectiles, ShootCooldown, setup_reload_indicator, update_reload_indicator}; // Système de tir (raycast)
 use crosshair::{setup_crosshair, CrosshairSpawned}; // Crosshair UI
 
 fn main() {
@@ -45,7 +45,10 @@ fn main() {
         .insert_resource(NetworkUpdateTimer::default())
         .insert_resource(OtherPlayers::default()) // NOUVEAU
         .insert_resource(CrosshairSpawned::default()) // NOUVEAU
+        .insert_resource(ShootCooldown::default()) // Cooldown de tir
+        .add_systems(Startup, setup_reload_indicator) // Indicateur de reload
         .add_systems(Update, setup_crosshair) // Crosshair UI (après caméra)
+        .add_systems(Update, update_reload_indicator) // MAJ indicateur reload
         .add_systems(Update, handle_cursor_locking)
         .add_systems(Update, toggle_cursor_on_escape)
         .add_systems(Update, lock_on_click)
