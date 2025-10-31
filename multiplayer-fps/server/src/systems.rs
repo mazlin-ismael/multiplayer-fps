@@ -163,16 +163,20 @@ fn perform_raycast_hit(
     server: &mut ResMut<RenetServer>,
 ) {
     const MAX_RAYCAST_DISTANCE: f32 = 1000.0; // Portée maximale
-    const STEP_SIZE: f32 = 0.1; // Précision du raycast (10cm)
+    const STEP_SIZE: f32 = 0.05; // Précision du raycast augmentée (5cm au lieu de 10cm)
+
+    println!("Starting raycast: start={:?}, dir={:?}", start, direction);
 
     let mut current_pos = start;
     let step = direction * STEP_SIZE;
     let mut distance_traveled = 0.0;
+    let mut steps = 0;
 
     // Marcher le long du rayon
     while distance_traveled < MAX_RAYCAST_DISTANCE {
         current_pos += step;
         distance_traveled += STEP_SIZE;
+        steps += 1;
 
         // Vérifier collision avec les murs
         let tile_x = current_pos.x.floor() as i32;
@@ -216,13 +220,11 @@ fn perform_raycast_hit(
             let dy = (current_pos.y - player_pos.y).abs();
             let dz = (current_pos.z - player_pos.z).abs();
 
-            // Debug détaillé tous les 5m pour ne pas spammer
-            if distance_traveled as i32 % 5 == 0 {
-                if dx < half_width * 2.0 && dz < half_depth * 2.0 {
-                    println!("  Near player {}: ray=[{:.2}, {:.2}, {:.2}] player=[{:.2}, {:.2}, {:.2}] dx={:.2} dy={:.2} dz={:.2}",
-                        player_id, current_pos.x, current_pos.y, current_pos.z,
-                        player_pos.x, player_pos.y, player_pos.z, dx, dy, dz);
-                }
+            // Debug: afficher quand on est à moins de 3m du joueur
+            if dx < 3.0 && dz < 3.0 && steps % 20 == 0 { // Tous les 1m environ
+                println!("  Step {}: Near player {} | ray=[{:.2}, {:.2}, {:.2}] player=[{:.2}, {:.2}, {:.2}] | dx={:.2} dy={:.2} dz={:.2}",
+                    steps, player_id, current_pos.x, current_pos.y, current_pos.z,
+                    player_pos.x, player_pos.y, player_pos.z, dx, dy, dz);
             }
 
             if dx < half_width && dy < half_height && dz < half_depth {
