@@ -23,15 +23,19 @@ pub fn shoot_system(
 
     if mouse_button.just_pressed(MouseButton::Left) {
         for (transform, controller) in query.iter() {
-            // Calculer la direction du tir depuis le centre de l'écran (direction du regard)
+            // IMPORTANT: Le tir part du CENTRE DE L'ÉCRAN (où est le crosshair)
+            // Le canon visible en bas de l'écran est purement esthétique
+
+            // Calculer la direction du tir depuis le crosshair (direction du regard)
             let yaw_rot = Quat::from_axis_angle(Vec3::Y, controller.yaw);
             let pitch_rot = Quat::from_axis_angle(Vec3::X, controller.pitch);
             let direction = yaw_rot * pitch_rot * Vec3::NEG_Z;
 
-            // Position de départ (position de la caméra/joueur)
+            // Position de départ: position de la caméra (au centre de l'écran)
+            // C'est exactement où le crosshair pointe
             let start_pos = transform.translation;
 
-            println!("Shooting raycast from {:?} in direction {:?}", start_pos, direction);
+            println!("Shooting raycast from CAMERA CENTER {:?} in direction {:?}", start_pos, direction);
 
             // Envoyer le message de tir au serveur (raycast)
             let message = ClientMessage::Shoot {

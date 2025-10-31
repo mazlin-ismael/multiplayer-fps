@@ -20,6 +20,12 @@ pub fn setup_crosshair(
     }
 
     spawned.0 = true;
+
+    // Paramètres du crosshair style Valorant
+    const LINE_LENGTH: f32 = 10.0;  // Longueur de chaque segment
+    const LINE_THICKNESS: f32 = 2.0; // Épaisseur
+    const GAP: f32 = 4.0;           // Espace au centre
+
     // Créer le crosshair au centre de l'écran
     commands
         .spawn(NodeBundle {
@@ -34,24 +40,52 @@ pub fn setup_crosshair(
             ..default()
         })
         .with_children(|parent| {
-            // Crosshair vertical (barre verticale)
+            // Segment HAUT
             parent.spawn(NodeBundle {
                 style: Style {
-                    width: Val::Px(2.0),
-                    height: Val::Px(20.0),
+                    width: Val::Px(LINE_THICKNESS),
+                    height: Val::Px(LINE_LENGTH),
                     position_type: PositionType::Absolute,
+                    top: Val::Px(-GAP - LINE_LENGTH), // Au-dessus du centre
                     ..default()
                 },
                 background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
                 ..default()
             });
 
-            // Crosshair horizontal (barre horizontale)
+            // Segment BAS
             parent.spawn(NodeBundle {
                 style: Style {
-                    width: Val::Px(20.0),
-                    height: Val::Px(2.0),
+                    width: Val::Px(LINE_THICKNESS),
+                    height: Val::Px(LINE_LENGTH),
                     position_type: PositionType::Absolute,
+                    top: Val::Px(GAP), // En-dessous du centre
+                    ..default()
+                },
+                background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
+                ..default()
+            });
+
+            // Segment GAUCHE
+            parent.spawn(NodeBundle {
+                style: Style {
+                    width: Val::Px(LINE_LENGTH),
+                    height: Val::Px(LINE_THICKNESS),
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(-GAP - LINE_LENGTH), // À gauche du centre
+                    ..default()
+                },
+                background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
+                ..default()
+            });
+
+            // Segment DROITE
+            parent.spawn(NodeBundle {
+                style: Style {
+                    width: Val::Px(LINE_LENGTH),
+                    height: Val::Px(LINE_THICKNESS),
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(GAP), // À droite du centre
                     ..default()
                 },
                 background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
