@@ -15,7 +15,7 @@ use input::{get_server_address, get_player_name};
 use network::{create_network_resources, check_connection, ConnectionState, CurrentMap, receive_map_system};
 use scene::{MapSpawned, spawn_map_if_received_system, spawn_camera_system, fps_controller_system, NetworkUpdateTimer, send_player_movement_system};
 use other_players::{OtherPlayers, receive_other_players_system, damage_flash_system}; // NOUVEAU
-use shooting::shoot_system; // Système de tir (raycast)
+use shooting::{shoot_system, update_visual_projectiles}; // Système de tir (raycast)
 use crosshair::{setup_crosshair, CrosshairSpawned}; // Crosshair UI
 
 fn main() {
@@ -56,6 +56,7 @@ fn main() {
         .add_systems(Update, (spawn_map_if_received_system, spawn_camera_system, fps_controller_system))
         .add_systems(Update, send_player_movement_system)
         .add_systems(Update, shoot_system) // Système de tir (raycast)
+        .add_systems(Update, update_visual_projectiles) // Animation des projectiles visuels
         .add_systems(Update, damage_flash_system) // Effet visuel de dommage
         .run();
 }
