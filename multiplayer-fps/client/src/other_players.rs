@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_renet::renet::{RenetClient, DefaultChannel};
 use shared::ServerMessage;
 use std::collections::HashMap;
-use crate::player_model::{create_player_model, TankCannon};
+use crate::player_model::{create_player_model, TankTurret, TankCannon};
 
 // Component pour identifier un autre joueur
 #[derive(Component)]
@@ -27,6 +27,7 @@ pub fn receive_other_players_system(
     query: Query<(Entity, &OtherPlayer)>,
     children_query: Query<&Children>,
     mut transform_query: Query<&mut Transform>,
+    turret_query: Query<Entity, With<TankTurret>>,
     cannon_query: Query<Entity, With<TankCannon>>,
 ) {
     while let Some(message) = client.receive_message(DefaultChannel::ReliableOrdered) {
@@ -51,45 +52,58 @@ pub fn receive_other_players_system(
                 }
                 
                 ServerMessage::PlayerUpdate { player_id, position, rotation } => {
-                    // Mettre à jour la position ET la rotation de l'autre joueur (tank)
+                    // Mettre à jour la position du tank et rotation de la tourelle/canon
                     if let Some(&tank_entity) = other_players.players.get(&player_id) {
-                        // rotation[0] = yaw (rotation horizontale autour de Y)
+                        // rotation[0] = yaw (rotation horizontale de la tourelle)
                         // rotation[1] = pitch (rotation verticale du canon)
-                        // Ajouter PI (180°) pour inverser car le canon était à l'envers
+                        // Ajouter PI (180°) au yaw pour inverser car le canon était à l'envers
                         let yaw = rotation[0] + std::f32::consts::PI;
                         let pitch = rotation[1];
 
-                        // Mettre à jour la rotation du tank (yaw seulement)
+                        // Limiter le pitch du canon entre -30° et +30° (environ -0.52 et +0.52 radians)
+                        const MAX_PITCH: f32 = 0.52; // ~30°
+                        let clamped_pitch = pitch.clamp(-MAX_PITCH, MAX_PITCH);
+
+                        // Mettre à jour la POSITION du tank (le châssis ne tourne pas)
                         if let Ok(mut tank_transform) = transform_query.get_mut(tank_entity) {
                             tank_transform.translation = Vec3::new(position[0], position[1], position[2]);
-                            tank_transform.rotation = Quat::from_rotation_y(yaw);
+                            // PAS de rotation sur le tank entier - seulement la tourelle tourne
                         }
 
-                        // Trouver le canon dans les enfants et appliquer le pitch
-                        fn find_cannon_recursive(
+                        // Fonction récursive pour trouver une entité avec un marker dans la hiérarchie
+                        fn find_entity_recursive<T: Component>(
                             entity: Entity,
                             children_query: &Query<&Children>,
-                            cannon_query: &Query<Entity, With<TankCannon>>,
+                            target_query: &Query<Entity, With<T>>,
                         ) -> Option<Entity> {
-                            // Vérifier si cette entité est le canon
-                            if cannon_query.get(entity).is_ok() {
+                            // Vérifier si cette entité a le marker
+                            if target_query.get(entity).is_ok() {
                                 return Some(entity);
                             }
                             // Sinon, chercher dans les enfants
                             if let Ok(children) = children_query.get(entity) {
                                 for &child in children.iter() {
-                                    if let Some(cannon) = find_cannon_recursive(child, children_query, cannon_query) {
-                                        return Some(cannon);
+                                    if let Some(found) = find_entity_recursive(child, children_query, target_query) {
+                                        return Some(found);
                                     }
                                 }
                             }
                             None
                         }
 
-                        if let Some(cannon_entity) = find_cannon_recursive(tank_entity, &children_query, &cannon_query) {
-                            if let Ok(mut cannon_transform) = transform_query.get_mut(cannon_entity) {
-                                // Appliquer le pitch au canon (rotation autour de X local)
-                                cannon_transform.rotation = Quat::from_rotation_x(pitch);
+                        // Trouver la tourelle et appliquer le yaw
+                        if let Some(turret_entity) = find_entity_recursive(tank_entity, &children_query, &turret_query) {
+                            if let Ok(mut turret_transform) = transform_query.get_mut(turret_entity) {
+                                // Appliquer le yaw à la tourelle (rotation autour de Y)
+                                turret_transform.rotation = Quat::from_rotation_y(yaw);
+                            }
+
+                            // Trouver le canon (enfant de la tourelle) et appliquer le pitch
+                            if let Some(cannon_entity) = find_entity_recursive(turret_entity, &children_query, &cannon_query) {
+                                if let Ok(mut cannon_transform) = transform_query.get_mut(cannon_entity) {
+                                    // Appliquer le pitch au canon (rotation autour de X local)
+                                    cannon_transform.rotation = Quat::from_rotation_x(clamped_pitch);
+                                }
                             }
                         }
                     }

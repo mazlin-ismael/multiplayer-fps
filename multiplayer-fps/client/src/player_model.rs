@@ -8,6 +8,10 @@ pub struct PlayerGltfModel;
 #[derive(Component)]
 pub struct WeaponGltfModel;
 
+// Marker component pour identifier la tourelle du tank (qui tourne avec le yaw)
+#[derive(Component)]
+pub struct TankTurret;
+
 // Marker component pour identifier le canon du tank (qui peut pivoter en hauteur)
 #[derive(Component)]
 pub struct TankCannon;
@@ -87,25 +91,36 @@ pub fn create_player_model(
                 ..Default::default()
             });
 
-            // Tourelle - sur le dessus du châssis
-            parent.spawn(PbrBundle {
-                mesh: turret_mesh,
-                material: turret_material.clone(),
-                transform: Transform::from_xyz(0.0, -0.9, 0.0), // Sur le châssis
-                ..Default::default()
-            });
-
-            // CANON - Long, pointant vers l'avant, bien visible !
-            // Entité séparée avec marker pour pouvoir le faire pivoter en hauteur
+            // TOURELLE - Entité parent qui tourne avec le yaw (rotation horizontale)
+            // La tourelle et le canon tournent ensemble
             parent.spawn((
-                PbrBundle {
-                    mesh: cannon_mesh,
-                    material: cannon_material.clone(),
-                    transform: Transform::from_xyz(0.0, -0.85, 1.0), // Devant, légèrement en haut
+                SpatialBundle {
+                    transform: Transform::from_xyz(0.0, -0.9, 0.0), // Sur le châssis
                     ..Default::default()
                 },
-                TankCannon, // Marker pour identifier et appliquer le pitch
-            ));
+                TankTurret, // Marker pour identifier et appliquer le yaw
+            ))
+            .with_children(|turret_parent| {
+                // Mesh visuel de la tourelle
+                turret_parent.spawn(PbrBundle {
+                    mesh: turret_mesh,
+                    material: turret_material.clone(),
+                    transform: Transform::from_xyz(0.0, 0.0, 0.0), // Position locale relative à la tourelle
+                    ..Default::default()
+                });
+
+                // CANON - Long, pointant vers l'avant, bien visible !
+                // Enfant de la tourelle, peut pivoter en hauteur (pitch) en plus du yaw hérité
+                turret_parent.spawn((
+                    PbrBundle {
+                        mesh: cannon_mesh,
+                        material: cannon_material.clone(),
+                        transform: Transform::from_xyz(0.0, 0.05, 1.0), // Devant la tourelle, légèrement en haut
+                        ..Default::default()
+                    },
+                    TankCannon, // Marker pour identifier et appliquer le pitch
+                ));
+            });
         })
         .id();
 
