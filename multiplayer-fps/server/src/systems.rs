@@ -203,38 +203,62 @@ fn perform_raycast_hit(
                 continue;
             }
 
-            // Hitbox du tank - CORRIGÉ pour correspondre au tank visuel
-            // La position du joueur est à y=1.7 (caméra), mais le tank visuel est plus bas
-            // Tank visuel: de ~0.2m à ~1.0m → centre à 0.6m
-            // Offset: 1.7 - 0.6 = 1.1m
-            let player_pos = Vec3::new(
-                player_state.position[0],
-                player_state.position[1] - 1.1,  // Décaler la hitbox vers le bas
-                player_state.position[2],
-            );
+            // Hitbox du tank - SYSTÈME DE HITBOX COMPOSITE (2 boîtes)
+            // Position joueur à y=1.7 (caméra)
 
-            // AABB collision - dimensions ajustées pour correspondre au tank visuel
-            // Tank visuel: châssis 1.2x0.4x1.8 + tourelle 0.8x0.5x0.8
-            // Augmenté de 15-20% pour avoir une marge de sécurité
-            let half_width = 0.7;   // 1.4m total (était 1.2m)
-            let half_height = 0.6;  // 1.2m total (était 1.0m)
-            let half_depth = 1.0;   // 2.0m total (était 1.8m)
+            let player_x = player_state.position[0];
+            let player_y = player_state.position[1];
+            let player_z = player_state.position[2];
 
-            let dx = (current_pos.x - player_pos.x).abs();
-            let dy = (current_pos.y - player_pos.y).abs();
-            let dz = (current_pos.z - player_pos.z).abs();
+            // CHÂSSIS: Cuboid(1.2, 0.4, 1.8) à y=-1.3 relatif
+            // Centre réel: y = 1.7 - 1.3 = 0.4
+            let chassis_center = Vec3::new(player_x, player_y - 1.3, player_z);
+            let chassis_half_width = 0.6;   // 1.2m total
+            let chassis_half_height = 0.2;  // 0.4m total
+            let chassis_half_depth = 0.9;   // 1.8m total
+
+            let chassis_dx = (current_pos.x - chassis_center.x).abs();
+            let chassis_dy = (current_pos.y - chassis_center.y).abs();
+            let chassis_dz = (current_pos.z - chassis_center.z).abs();
+
+            let hit_chassis = chassis_dx < chassis_half_width
+                           && chassis_dy < chassis_half_height
+                           && chassis_dz < chassis_half_depth;
+
+            // TOURELLE: Cuboid(0.8, 0.5, 0.8) à y=-0.9 relatif
+            // Centre réel: y = 1.7 - 0.9 = 0.8
+            let turret_center = Vec3::new(player_x, player_y - 0.9, player_z);
+            let turret_half_width = 0.4;    // 0.8m total
+            let turret_half_height = 0.25;  // 0.5m total
+            let turret_half_depth = 0.4;    // 0.8m total
+
+            let turret_dx = (current_pos.x - turret_center.x).abs();
+            let turret_dy = (current_pos.y - turret_center.y).abs();
+            let turret_dz = (current_pos.z - turret_center.z).abs();
+
+            let hit_turret = turret_dx < turret_half_width
+                          && turret_dy < turret_half_height
+                          && turret_dz < turret_half_depth;
 
             // Debug: afficher quand on est à moins de 3m du joueur
-            if dx < 3.0 && dz < 3.0 && steps % 20 == 0 { // Tous les 1m environ
-                println!("  Step {}: Near player {} | ray=[{:.2}, {:.2}, {:.2}] player=[{:.2}, {:.2}, {:.2}] | dx={:.2} dy={:.2} dz={:.2}",
-                    steps, player_id, current_pos.x, current_pos.y, current_pos.z,
-                    player_pos.x, player_pos.y, player_pos.z, dx, dy, dz);
+            if (chassis_dx < 3.0 && chassis_dz < 3.0 || turret_dx < 3.0 && turret_dz < 3.0) && steps % 20 == 0 {
+                println!("  Step {}: Near player {} | ray=[{:.2}, {:.2}, {:.2}]", steps, player_id, current_pos.x, current_pos.y, current_pos.z);
+                println!("    Chassis center=[{:.2}, {:.2}, {:.2}] | dx={:.2} dy={:.2} dz={:.2}",
+                    chassis_center.x, chassis_center.y, chassis_center.z, chassis_dx, chassis_dy, chassis_dz);
+                println!("    Turret center=[{:.2}, {:.2}, {:.2}] | dx={:.2} dy={:.2} dz={:.2}",
+                    turret_center.x, turret_center.y, turret_center.z, turret_dx, turret_dy, turret_dz);
             }
 
-            if dx < half_width && dy < half_height && dz < half_depth {
+            if hit_chassis || hit_turret {
                 // TOUCHÉ!
-                println!(">>> HIT! Player {} at ray={:?} player={:?} dx={:.2} dy={:.2} dz={:.2}",
-                    player_id, current_pos, player_pos, dx, dy, dz);
+                let hit_part = if hit_chassis && hit_turret { "BOTH" } else if hit_chassis { "CHASSIS" } else { "TURRET" };
+                println!(">>> HIT! Player {} ({}) at ray={:?}", player_id, hit_part, current_pos);
+                if hit_chassis {
+                    println!("    Chassis: dx={:.2} dy={:.2} dz={:.2}", chassis_dx, chassis_dy, chassis_dz);
+                }
+                if hit_turret {
+                    println!("    Turret: dx={:.2} dy={:.2} dz={:.2}", turret_dx, turret_dy, turret_dz);
+                }
                 hit_player_id = Some(*player_id);
                 break; // Sortir de la boucle
             }
