@@ -51,7 +51,7 @@ pub fn receive_other_players_system(
                 }
                 
                 ServerMessage::PlayerUpdate { player_id, position, rotation } => {
-                    // Mettre à jour la position du tank et rotation de la tourelle/canon
+                    // Mettre à jour la position et rotation du tank
                     if let Some(&tank_entity) = other_players.players.get(&player_id) {
                         // rotation[0] = yaw (rotation horizontale)
                         // rotation[1] = pitch (rotation verticale)
@@ -59,10 +59,11 @@ pub fn receive_other_players_system(
                         let yaw = rotation[0] + std::f32::consts::PI;
                         let pitch = rotation[1]; // Déjà limité à ±30° côté client
 
-                        // Mettre à jour la POSITION du tank (le châssis ne tourne pas)
+                        // Mettre à jour la position ET la rotation du tank entier (yaw)
                         if let Ok(mut tank_transform) = transform_query.get_mut(tank_entity) {
                             tank_transform.translation = Vec3::new(position[0], position[1], position[2]);
-                            // PAS de rotation sur le tank entier - seulement la tourelle tourne
+                            // Le tank entier tourne avec le yaw (châssis + tourelle)
+                            tank_transform.rotation = Quat::from_rotation_y(yaw);
                         }
 
                         // Fonction récursive pour trouver une entité avec un marker dans la hiérarchie
@@ -86,15 +87,13 @@ pub fn receive_other_players_system(
                             None
                         }
 
-                        // Trouver la tourelle et appliquer yaw + pitch (elle bouge avec le canon)
+                        // Trouver la tourelle et appliquer seulement le pitch (elle hérite du yaw du parent)
                         if let Some(turret_entity) = find_entity_recursive(tank_entity, &children_query, &turret_query) {
                             if let Ok(mut turret_transform) = transform_query.get_mut(turret_entity) {
-                                // Appliquer yaw ET pitch à la tourelle entière (carré vert + canon noir)
-                                // D'abord yaw (Y), puis pitch (X) dans l'espace local
-                                // INVERSER le pitch car sinon c'est à l'envers (viser bas = monte, viser haut = descend)
-                                let yaw_rot = Quat::from_rotation_y(yaw);
-                                let pitch_rot = Quat::from_rotation_x(-pitch);
-                                turret_transform.rotation = yaw_rot * pitch_rot;
+                                // Appliquer SEULEMENT le pitch à la tourelle (rotation relative au tank)
+                                // Le yaw est hérité du parent (tank_entity)
+                                // INVERSER le pitch car sinon c'est à l'envers
+                                turret_transform.rotation = Quat::from_rotation_x(-pitch);
                             }
                         }
                     }
