@@ -91,8 +91,9 @@ pub fn receive_other_players_system(
                             if let Ok(mut turret_transform) = transform_query.get_mut(turret_entity) {
                                 // Appliquer yaw ET pitch à la tourelle entière (carré vert + canon noir)
                                 // D'abord yaw (Y), puis pitch (X) dans l'espace local
+                                // INVERSER le pitch car sinon c'est à l'envers (viser bas = monte, viser haut = descend)
                                 let yaw_rot = Quat::from_rotation_y(yaw);
-                                let pitch_rot = Quat::from_rotation_x(pitch);
+                                let pitch_rot = Quat::from_rotation_x(-pitch);
                                 turret_transform.rotation = yaw_rot * pitch_rot;
                             }
                         }
