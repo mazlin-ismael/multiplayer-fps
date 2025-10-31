@@ -181,6 +181,9 @@ fn perform_raycast_hit(
         }
 
         // Vérifier collision avec les joueurs
+        // D'abord trouver quel joueur est touché (sans modifier players)
+        let mut hit_player_id: Option<u64> = None;
+
         for (player_id, player_state) in players.players.iter() {
             // Ne pas toucher le tireur
             if *player_id == shooter_id {
@@ -206,59 +209,64 @@ fn perform_raycast_hit(
             if dx < half_width && dy < half_height && dz < half_depth {
                 // TOUCHÉ!
                 println!("Raycast hit player {} at {:?}", player_id, current_pos);
+                hit_player_id = Some(*player_id);
+                break; // Sortir de la boucle
+            }
+        }
 
-                // Infliger 1 point de dégâts
-                if let Some((new_health, is_dead)) = players.damage_player(*player_id, 1) {
-                    // Informer tous les clients des dégâts
-                    let damage_message = ServerMessage::PlayerDamaged {
-                        player_id: *player_id,
-                        new_health,
-                        attacker_id: shooter_id,
+        // Maintenant traiter les dégâts (hors de la boucle pour éviter le borrow checker)
+        if let Some(hit_id) = hit_player_id {
+            // Infliger 1 point de dégâts
+            if let Some((new_health, is_dead)) = players.damage_player(hit_id, 1) {
+                // Informer tous les clients des dégâts
+                let damage_message = ServerMessage::PlayerDamaged {
+                    player_id: hit_id,
+                    new_health,
+                    attacker_id: shooter_id,
+                };
+
+                for client_id in server.clients_id() {
+                    server.send_message(client_id, DefaultChannel::ReliableOrdered, damage_message.to_bytes());
+                }
+
+                // Si le joueur est mort
+                if is_dead {
+                    println!("Player {} was killed by player {}", hit_id, shooter_id);
+
+                    // Informer tous les clients de la mort
+                    let death_message = ServerMessage::PlayerDied {
+                        player_id: hit_id,
+                        killer_id: shooter_id,
                     };
 
                     for client_id in server.clients_id() {
-                        server.send_message(client_id, DefaultChannel::ReliableOrdered, damage_message.to_bytes());
+                        server.send_message(client_id, DefaultChannel::ReliableOrdered, death_message.to_bytes());
                     }
 
-                    // Si le joueur est mort
-                    if is_dead {
-                        println!("Player {} was killed by player {}", player_id, shooter_id);
+                    // Le tueur récupère 1 point de vie
+                    players.heal_player(shooter_id, 1);
 
-                        // Informer tous les clients de la mort
-                        let death_message = ServerMessage::PlayerDied {
-                            player_id: *player_id,
-                            killer_id: shooter_id,
+                    // Respawn le joueur mort
+                    if let Some(spawn_index) = players.get_spawn_index(hit_id) {
+                        let respawn_map = GameMap::from_global().with_spawn_position(spawn_index);
+                        let spawn_pos = [respawn_map.spawn_x, 1.7, respawn_map.spawn_z];
+                        players.respawn_player(hit_id, spawn_pos);
+
+                        // Informer tous les clients du respawn
+                        let respawn_message = ServerMessage::PlayerRespawned {
+                            player_id: hit_id,
+                            position: spawn_pos,
+                            health: 3,
                         };
 
                         for client_id in server.clients_id() {
-                            server.send_message(client_id, DefaultChannel::ReliableOrdered, death_message.to_bytes());
-                        }
-
-                        // Le tueur récupère 1 point de vie
-                        players.heal_player(shooter_id, 1);
-
-                        // Respawn le joueur mort
-                        if let Some(spawn_index) = players.get_spawn_index(*player_id) {
-                            let respawn_map = GameMap::from_global().with_spawn_position(spawn_index);
-                            let spawn_pos = [respawn_map.spawn_x, 1.7, respawn_map.spawn_z];
-                            players.respawn_player(*player_id, spawn_pos);
-
-                            // Informer tous les clients du respawn
-                            let respawn_message = ServerMessage::PlayerRespawned {
-                                player_id: *player_id,
-                                position: spawn_pos,
-                                health: 3,
-                            };
-
-                            for client_id in server.clients_id() {
-                                server.send_message(client_id, DefaultChannel::ReliableOrdered, respawn_message.to_bytes());
-                            }
+                            server.send_message(client_id, DefaultChannel::ReliableOrdered, respawn_message.to_bytes());
                         }
                     }
                 }
-
-                return; // Le tir s'arrête au premier joueur touché
             }
+
+            return; // Le tir s'arrête au premier joueur touché
         }
     }
 
