@@ -8,6 +8,10 @@ pub struct PlayerGltfModel;
 #[derive(Component)]
 pub struct WeaponGltfModel;
 
+// Marker component pour identifier le canon du tank (qui peut pivoter en hauteur)
+#[derive(Component)]
+pub struct TankCannon;
+
 /// Crée un modèle 3D de TANK avec châssis, tourelle et canon
 /// Le tank roule au sol (y=0) et le canon est bien visible
 pub fn create_player_model(
@@ -92,12 +96,16 @@ pub fn create_player_model(
             });
 
             // CANON - Long, pointant vers l'avant, bien visible !
-            parent.spawn(PbrBundle {
-                mesh: cannon_mesh,
-                material: cannon_material.clone(),
-                transform: Transform::from_xyz(0.0, -0.85, 1.0), // Devant, légèrement en haut
-                ..Default::default()
-            });
+            // Entité séparée avec marker pour pouvoir le faire pivoter en hauteur
+            parent.spawn((
+                PbrBundle {
+                    mesh: cannon_mesh,
+                    material: cannon_material.clone(),
+                    transform: Transform::from_xyz(0.0, -0.85, 1.0), // Devant, légèrement en haut
+                    ..Default::default()
+                },
+                TankCannon, // Marker pour identifier et appliquer le pitch
+            ));
         })
         .id();
 

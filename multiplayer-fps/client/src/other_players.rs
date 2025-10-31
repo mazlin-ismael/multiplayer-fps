@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_renet::renet::{RenetClient, DefaultChannel};
 use shared::ServerMessage;
 use std::collections::HashMap;
-use crate::player_model::create_player_model;
+use crate::player_model::{create_player_model, TankCannon};
 
 // Component pour identifier un autre joueur
 #[derive(Component)]
@@ -25,6 +25,9 @@ pub fn receive_other_players_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     query: Query<(Entity, &OtherPlayer)>,
+    children_query: Query<&Children>,
+    mut transform_query: Query<&mut Transform>,
+    cannon_query: Query<Entity, With<TankCannon>>,
 ) {
     while let Some(message) = client.receive_message(DefaultChannel::ReliableOrdered) {
         if let Some(server_msg) = ServerMessage::from_bytes(&message) {
@@ -49,17 +52,45 @@ pub fn receive_other_players_system(
                 
                 ServerMessage::PlayerUpdate { player_id, position, rotation } => {
                     // Mettre à jour la position ET la rotation de l'autre joueur (tank)
-                    if let Some(&entity) = other_players.players.get(&player_id) {
-                        if let Some(mut entity_commands) = commands.get_entity(entity) {
-                            // rotation[0] = yaw (rotation autour de Y)
-                            // rotation[1] = pitch (pas utilisé pour les tanks)
-                            // Ajouter PI (180°) pour inverser car le canon était à l'envers
-                            let yaw = rotation[0] + std::f32::consts::PI;
+                    if let Some(&tank_entity) = other_players.players.get(&player_id) {
+                        // rotation[0] = yaw (rotation horizontale autour de Y)
+                        // rotation[1] = pitch (rotation verticale du canon)
+                        // Ajouter PI (180°) pour inverser car le canon était à l'envers
+                        let yaw = rotation[0] + std::f32::consts::PI;
+                        let pitch = rotation[1];
 
-                            entity_commands.insert(
-                                Transform::from_xyz(position[0], position[1], position[2])
-                                    .with_rotation(Quat::from_rotation_y(yaw))
-                            );
+                        // Mettre à jour la rotation du tank (yaw seulement)
+                        if let Ok(mut tank_transform) = transform_query.get_mut(tank_entity) {
+                            tank_transform.translation = Vec3::new(position[0], position[1], position[2]);
+                            tank_transform.rotation = Quat::from_rotation_y(yaw);
+                        }
+
+                        // Trouver le canon dans les enfants et appliquer le pitch
+                        fn find_cannon_recursive(
+                            entity: Entity,
+                            children_query: &Query<&Children>,
+                            cannon_query: &Query<Entity, With<TankCannon>>,
+                        ) -> Option<Entity> {
+                            // Vérifier si cette entité est le canon
+                            if cannon_query.get(entity).is_ok() {
+                                return Some(entity);
+                            }
+                            // Sinon, chercher dans les enfants
+                            if let Ok(children) = children_query.get(entity) {
+                                for &child in children.iter() {
+                                    if let Some(cannon) = find_cannon_recursive(child, children_query, cannon_query) {
+                                        return Some(cannon);
+                                    }
+                                }
+                            }
+                            None
+                        }
+
+                        if let Some(cannon_entity) = find_cannon_recursive(tank_entity, &children_query, &cannon_query) {
+                            if let Ok(mut cannon_transform) = transform_query.get_mut(cannon_entity) {
+                                // Appliquer le pitch au canon (rotation autour de X local)
+                                cannon_transform.rotation = Quat::from_rotation_x(pitch);
+                            }
                         }
                     }
                 }
