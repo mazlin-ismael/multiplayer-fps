@@ -21,10 +21,10 @@ pub fn setup_crosshair(
 
     spawned.0 = true;
 
-    // Paramètres du crosshair style Valorant
-    const LINE_LENGTH: f32 = 10.0;  // Longueur de chaque segment
+    // Paramètres du crosshair - lignes longues avec petit espace
+    const LINE_LENGTH: f32 = 18.0;  // Longueur de chaque segment (plus long)
     const LINE_THICKNESS: f32 = 2.0; // Épaisseur
-    const GAP: f32 = 4.0;           // Espace au centre
+    const GAP: f32 = 2.0;           // Petit espace au centre
 
     // Créer le crosshair au centre de l'écran
     commands
