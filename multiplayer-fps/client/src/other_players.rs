@@ -12,6 +12,17 @@ pub struct OtherPlayer {
     pub health: u8,
 }
 
+#[allow(dead_code)]
+impl OtherPlayer {
+    pub fn player_id(&self) -> u64 {
+        self.player_id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
 // Component pour l'effet de dommage (flash rouge)
 #[derive(Component)]
 pub struct DamageFlash {
@@ -163,15 +174,6 @@ pub fn receive_other_players_system(
             }
         }
     }
-}
-
-// Système pour interpoler les mouvements des autres joueurs (smooth)
-pub fn interpolate_other_players_system(
-    time: Res<Time>,
-    mut query: Query<&mut Transform, With<OtherPlayer>>,
-) {
-    // Pour l'instant on fait juste un téléport, mais on pourrait faire une interpolation smooth
-    // C'est une amélioration future possible
 }
 
 // Système pour gérer l'effet de flash rouge quand un tank est touché

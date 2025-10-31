@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::input::mouse::MouseMotion;
 use bevy_rapier3d::prelude::*;
 use bevy_renet::renet::{RenetClient, DefaultChannel};
-use shared::{GameMap, ClientMessage};
+use shared::ClientMessage;
 
 use crate::network::CurrentMap;
 use crate::player_model::create_fps_weapon;

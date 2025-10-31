@@ -2,10 +2,12 @@ use bevy::prelude::*;
 
 // Marker component pour identifier le modèle GLTF du joueur
 #[derive(Component)]
+#[allow(dead_code)]
 pub struct PlayerGltfModel;
 
 // Marker component pour l'arme GLTF
 #[derive(Component)]
+#[allow(dead_code)]
 pub struct WeaponGltfModel;
 
 // Marker component pour identifier la tourelle du tank (qui tourne avec le yaw)
@@ -193,11 +195,12 @@ pub fn create_fps_weapon(
 
 /// Crée un joueur avec modèle GLTF (soldat masqué)
 /// Essaie de charger models/player.glb, sinon utilise le modèle procédural
+#[allow(dead_code)]
 pub fn create_player_model_gltf(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    meshes: &mut ResMut<Assets<Mesh>>,
-    materials: &mut ResMut<Assets<StandardMaterial>>,
+    _meshes: &mut ResMut<Assets<Mesh>>,
+    _materials: &mut ResMut<Assets<StandardMaterial>>,
 ) -> Entity {
     // Essayer de charger le modèle GLTF (Forest Soldier)
     // Note: Bevy charge les assets de manière asynchrone, donc on crée toujours l'entité
@@ -244,6 +247,7 @@ pub fn create_player_model_gltf(
 
 /// Version procédurale de fallback si les modèles GLTF ne sont pas disponibles
 /// (garde le code actuel pour compatibilité)
+#[allow(dead_code)]
 pub fn create_player_model_procedural(
     commands: &mut Commands,
     meshes: &mut ResMut<Assets<Mesh>>,

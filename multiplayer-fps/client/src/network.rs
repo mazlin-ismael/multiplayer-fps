@@ -53,7 +53,18 @@ fn name_to_user_data(name: &str) -> [u8; 256] {
 
 pub fn create_network_resources(addr: String, player_name: String) -> (RenetClient, NetcodeClientTransport) {
     let client = RenetClient::new(ConnectionConfig::default());
-    let server_addr: SocketAddr = addr.parse().unwrap();
+
+    // Parse l'adresse avec gestion d'erreur claire
+    let server_addr: SocketAddr = match addr.parse() {
+        Ok(addr) => addr,
+        Err(e) => {
+            eprintln!("Erreur: impossible de parser l'adresse '{}'", addr);
+            eprintln!("Format attendu: IP:PORT (exemple: 127.0.0.1:5000 ou localhost:5000)");
+            eprintln!("Détail de l'erreur: {:?}", e);
+            std::process::exit(1);
+        }
+    };
+
     let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
     let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
     let client_id = current_time.as_micros() as u64;

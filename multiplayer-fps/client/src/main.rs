@@ -16,7 +16,7 @@ use network::{create_network_resources, check_connection, ConnectionState, Curre
 use scene::{MapSpawned, spawn_map_if_received_system, spawn_camera_system, fps_controller_system, NetworkUpdateTimer, send_player_movement_system};
 use other_players::{OtherPlayers, receive_other_players_system, damage_flash_system}; // NOUVEAU
 use shooting::shoot_system; // Système de tir (raycast)
-use crosshair::setup_crosshair; // Crosshair UI
+use crosshair::{setup_crosshair, CrosshairSpawned}; // Crosshair UI
 
 fn main() {
     let addr = get_server_address();
@@ -44,7 +44,8 @@ fn main() {
         .insert_resource(CursorLocked(false))
         .insert_resource(NetworkUpdateTimer::default())
         .insert_resource(OtherPlayers::default()) // NOUVEAU
-        .add_systems(Startup, setup_crosshair) // Crosshair UI
+        .insert_resource(CrosshairSpawned::default()) // NOUVEAU
+        .add_systems(Update, setup_crosshair) // Crosshair UI (après caméra)
         .add_systems(Update, handle_cursor_locking)
         .add_systems(Update, toggle_cursor_on_escape)
         .add_systems(Update, lock_on_click)

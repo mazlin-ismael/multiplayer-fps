@@ -4,8 +4,22 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct Crosshair;
 
-// Système pour créer le crosshair au centre de l'écran
-pub fn setup_crosshair(mut commands: Commands) {
+// Resource pour suivre si le crosshair a été créé
+#[derive(Resource, Default)]
+pub struct CrosshairSpawned(pub bool);
+
+// Système pour créer le crosshair au centre de l'écran (après la caméra)
+pub fn setup_crosshair(
+    mut commands: Commands,
+    mut spawned: ResMut<CrosshairSpawned>,
+    camera_query: Query<&Camera>,
+) {
+    // Ne créer le crosshair que si la caméra existe et qu'il n'a pas déjà été créé
+    if spawned.0 || camera_query.is_empty() {
+        return;
+    }
+
+    spawned.0 = true;
     // Créer le crosshair au centre de l'écran
     commands
         .spawn(NodeBundle {
