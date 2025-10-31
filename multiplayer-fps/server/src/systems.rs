@@ -125,7 +125,16 @@ pub fn handle_player_messages(
                             let start = Vec3::new(position[0], position[1], position[2]);
                             let dir = Vec3::new(direction[0], direction[1], direction[2]).normalize();
 
-                            println!("Player {} shooting raycast from {:?} dir {:?}", shooter_id, start, dir);
+                            println!("\n=== SHOOT DEBUG ===");
+                            println!("Player {} shooting from {:?} dir {:?}", shooter_id, start, dir);
+
+                            // Debug: afficher toutes les positions des joueurs
+                            for (pid, pstate) in registry.players.iter() {
+                                if *pid != shooter_id {
+                                    println!("  Target player {} at [{}, {}, {}]",
+                                        pid, pstate.position[0], pstate.position[1], pstate.position[2]);
+                                }
+                            }
 
                             // Vérifier le raycast contre les murs et les joueurs
                             perform_raycast_hit(
@@ -197,18 +206,28 @@ fn perform_raycast_hit(
                 player_state.position[2],
             );
 
-            // AABB collision
-            let half_width = 0.8;
-            let half_height = 0.9;
-            let half_depth = 1.0;
+            // AABB collision - dimensions augmentées pour mieux correspondre au tank
+            let half_width = 1.0;   // Largeur augmentée (était 0.8)
+            let half_height = 1.2;  // Hauteur augmentée (était 0.9)
+            let half_depth = 1.2;   // Profondeur augmentée (était 1.0)
 
             let dx = (current_pos.x - player_pos.x).abs();
             let dy = (current_pos.y - player_pos.y).abs();
             let dz = (current_pos.z - player_pos.z).abs();
 
+            // Debug détaillé tous les 50 steps pour ne pas spammer
+            if distance_traveled as i32 % 5 == 0 {
+                if dx < half_width * 2.0 && dz < half_depth * 2.0 {
+                    println!("  Near player {}: ray=[{:.2}, {:.2}, {:.2}] player=[{:.2}, {:.2}, {:.2}] dx={:.2} dy={:.2} dz={:.2}",
+                        player_id, current_pos.x, current_pos.y, current_pos.z,
+                        player_pos.x, player_pos.y, player_pos.z, dx, dy, dz);
+                }
+            }
+
             if dx < half_width && dy < half_height && dz < half_depth {
                 // TOUCHÉ!
-                println!("Raycast hit player {} at {:?}", player_id, current_pos);
+                println!(">>> HIT! Player {} at ray={:?} player={:?} dx={:.2} dy={:.2} dz={:.2}",
+                    player_id, current_pos, player_pos, dx, dy, dz);
                 hit_player_id = Some(*player_id);
                 break; // Sortir de la boucle
             }

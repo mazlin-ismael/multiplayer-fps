@@ -57,20 +57,5 @@ pub fn setup_crosshair(
                 background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
                 ..default()
             });
-
-            // Point central
-            parent.spawn((
-                NodeBundle {
-                    style: Style {
-                        width: Val::Px(4.0),
-                        height: Val::Px(4.0),
-                        position_type: PositionType::Absolute,
-                        ..default()
-                    },
-                    background_color: Color::srgba(1.0, 0.0, 0.0, 0.9).into(),
-                    ..default()
-                },
-                Crosshair,
-            ));
         });
 }
