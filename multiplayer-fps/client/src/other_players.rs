@@ -184,6 +184,7 @@ pub fn damage_flash_system(
     mut query: Query<(Entity, &mut DamageFlash, &Children)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     material_query: Query<&Handle<StandardMaterial>>,
+    children_query: Query<&Children>,
 ) {
     for (entity, mut flash, children) in query.iter_mut() {
         flash.timer.tick(time.delta());
@@ -191,9 +192,16 @@ pub fn damage_flash_system(
         // Calculer l'intensité du flash (1.0 au début, 0.0 à la fin)
         let flash_intensity = 1.0 - flash.timer.fraction();
 
-        // Parcourir tous les enfants pour modifier leurs matériaux
-        for &child in children.iter() {
-            if let Ok(material_handle) = material_query.get(child) {
+        // Fonction récursive pour parcourir tous les enfants
+        fn apply_flash_recursive(
+            entity: Entity,
+            flash_intensity: f32,
+            materials: &mut ResMut<Assets<StandardMaterial>>,
+            material_query: &Query<&Handle<StandardMaterial>>,
+            children_query: &Query<&Children>,
+        ) {
+            // Appliquer le flash sur cette entité si elle a un matériau
+            if let Ok(material_handle) = material_query.get(entity) {
                 if let Some(material) = materials.get_mut(material_handle) {
                     // Interpoler vers le rouge selon l'intensité du flash
                     let red_tint = flash_intensity;
@@ -204,18 +212,46 @@ pub fn damage_flash_system(
                     );
                 }
             }
+
+            // Appliquer récursivement sur tous les enfants
+            if let Ok(children) = children_query.get(entity) {
+                for &child in children.iter() {
+                    apply_flash_recursive(child, flash_intensity, materials, material_query, children_query);
+                }
+            }
+        }
+
+        // Appliquer le flash à tous les enfants récursivement
+        for &child in children.iter() {
+            apply_flash_recursive(child, flash_intensity, &mut materials, &material_query, &children_query);
         }
 
         // Supprimer le composant quand le flash est terminé
         if flash.timer.finished() {
-            // Remettre les couleurs originales
-            for &child in children.iter() {
-                if let Ok(material_handle) = material_query.get(child) {
+            // Remettre les couleurs originales sur tous les enfants récursivement
+            fn reset_colors_recursive(
+                entity: Entity,
+                materials: &mut ResMut<Assets<StandardMaterial>>,
+                material_query: &Query<&Handle<StandardMaterial>>,
+                children_query: &Query<&Children>,
+            ) {
+                if let Ok(material_handle) = material_query.get(entity) {
                     if let Some(material) = materials.get_mut(material_handle) {
-                        // Couleur verte militaire originale
+                        // Couleur verte militaire originale pour le tank
+                        // (on remet la couleur par défaut, les différentes parties auront leur couleur)
                         material.base_color = Color::srgb(0.2, 0.3, 0.2);
                     }
                 }
+
+                if let Ok(children) = children_query.get(entity) {
+                    for &child in children.iter() {
+                        reset_colors_recursive(child, materials, material_query, children_query);
+                    }
+                }
+            }
+
+            for &child in children.iter() {
+                reset_colors_recursive(child, &mut materials, &material_query, &children_query);
             }
 
             commands.entity(entity).remove::<DamageFlash>();

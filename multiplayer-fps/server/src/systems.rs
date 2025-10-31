@@ -153,6 +153,7 @@ pub fn update_projectiles_system(
     mut server: ResMut<RenetServer>,
     mut projectiles: ResMut<ProjectileRegistry>,
     mut players: ResMut<PlayerRegistry>,
+    map: Res<GameMap>,
 ) {
     let dt = time.delta_seconds();
     let mut projectiles_to_remove = Vec::new();
@@ -170,6 +171,23 @@ pub fn update_projectiles_system(
             continue;
         }
 
+        // Vérifier collision avec les murs
+        let tile_x = projectile.position.x.floor() as i32;
+        let tile_z = projectile.position.z.floor() as i32;
+
+        if tile_x >= 0 && tile_x < map.width as i32 && tile_z >= 0 && tile_z < map.height as i32 {
+            let tile = map.tiles[tile_z as usize][tile_x as usize];
+            if tile as u8 == 1 { // Mur
+                println!("Projectile {} hit wall at ({}, {})", projectile_id, tile_x, tile_z);
+                projectiles_to_remove.push(*projectile_id);
+                continue;
+            }
+        } else {
+            // Le projectile est sorti de la map
+            projectiles_to_remove.push(*projectile_id);
+            continue;
+        }
+
         // Vérifier les collisions avec les joueurs
         for (player_id, player_state) in players.players.iter() {
             // Ne pas toucher le tireur
@@ -177,17 +195,26 @@ pub fn update_projectiles_system(
                 continue;
             }
 
-            // Hitbox simple: sphère de rayon 1.5m autour du joueur
+            // Hitbox réaliste: boîte englobante du tank (1.2 x 1.5 x 1.8)
+            // Le tank fait environ 1.2m de large, 1.5m de haut, 1.8m de long
             let player_pos = Vec3::new(
                 player_state.position[0],
                 player_state.position[1],
                 player_state.position[2],
             );
-            let distance = projectile.position.distance(player_pos);
 
-            if distance < 1.5 {
+            // Vérifier collision AABB (Axis-Aligned Bounding Box)
+            let half_width = 0.8;  // 1.2m / 2 + marge
+            let half_height = 0.9; // 1.5m / 2 + marge (de -0.9 à +0.6 depuis le centre)
+            let half_depth = 1.0;  // 1.8m / 2 + marge
+
+            let dx = (projectile.position.x - player_pos.x).abs();
+            let dy = (projectile.position.y - player_pos.y).abs();
+            let dz = (projectile.position.z - player_pos.z).abs();
+
+            if dx < half_width && dy < half_height && dz < half_depth {
                 // Collision détectée!
-                println!("Projectile {} hit player {}", projectile_id, player_id);
+                println!("Projectile {} hit player {} at {:?}", projectile_id, player_id, projectile.position);
                 damage_events.push((*projectile_id, *player_id, projectile.shooter_id));
                 projectiles_to_remove.push(*projectile_id);
                 break;
