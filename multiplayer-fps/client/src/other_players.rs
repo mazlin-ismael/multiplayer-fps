@@ -46,10 +46,28 @@ pub fn receive_other_players_system(
     children_query: Query<&Children>,
     mut transform_query: Query<&mut Transform>,
     turret_query: Query<Entity, With<TankTurret>>,
+    // Ajout pour traiter aussi les messages MapData
+    mut current_map: ResMut<crate::network::CurrentMap>,
+    mut state: ResMut<crate::network::ConnectionState>,
 ) {
     while let Some(message) = client.receive_message(DefaultChannel::ReliableOrdered) {
         if let Some(server_msg) = ServerMessage::from_bytes(&message) {
             match server_msg {
+                // Traiter MapData ici aussi pour éviter de perdre des messages
+                ServerMessage::MapData { data } => {
+                    if !state.map_received {
+                        println!("DEBUG: Received map data {} bytes", data.len());
+                        if let Some(map) = shared::GameMap::from_bytes(&data) {
+                            println!("Map received from server!");
+                            map.display();
+                            current_map.0 = Some(map);
+                            state.map_received = true;
+                        } else {
+                            println!("ERROR: Failed to parse map from bytes");
+                        }
+                    }
+                }
+
                 ServerMessage::PlayerJoined { player_id, name, position, health } => {
                     println!("Player {} ({}) joined at {:?} with {} health", player_id, name, position, health);
 
