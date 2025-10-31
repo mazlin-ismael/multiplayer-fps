@@ -22,7 +22,7 @@ pub fn setup_crosshair(
     spawned.0 = true;
 
     // Paramètres du crosshair - lignes longues avec petit espace
-    const LINE_LENGTH: f32 = 18.0;  // Longueur de chaque segment (plus long)
+    const LINE_LENGTH: f32 = 18.0;  // Longueur de chaque segment
     const LINE_THICKNESS: f32 = 2.0; // Épaisseur
     const GAP: f32 = 2.0;           // Petit espace au centre
 
@@ -34,62 +34,77 @@ pub fn setup_crosshair(
                 height: Val::Percent(100.0),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
-                position_type: PositionType::Absolute,
                 ..default()
             },
             ..default()
         })
         .with_children(|parent| {
-            // Segment HAUT
+            // Point central de référence (0x0) - tous les segments sont positionnés par rapport à ce point
             parent.spawn(NodeBundle {
                 style: Style {
-                    width: Val::Px(LINE_THICKNESS),
-                    height: Val::Px(LINE_LENGTH),
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(-GAP - LINE_LENGTH), // Au-dessus du centre
+                    width: Val::Px(0.0),
+                    height: Val::Px(0.0),
+                    position_type: PositionType::Relative,
                     ..default()
                 },
-                background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
                 ..default()
-            });
+            })
+            .with_children(|center| {
+                // Segment HAUT (vertical)
+                center.spawn(NodeBundle {
+                    style: Style {
+                        width: Val::Px(LINE_THICKNESS),
+                        height: Val::Px(LINE_LENGTH),
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(-LINE_THICKNESS / 2.0), // Centré horizontalement
+                        top: Val::Px(-(GAP + LINE_LENGTH)),   // Au-dessus avec gap
+                        ..default()
+                    },
+                    background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
+                    ..default()
+                });
 
-            // Segment BAS
-            parent.spawn(NodeBundle {
-                style: Style {
-                    width: Val::Px(LINE_THICKNESS),
-                    height: Val::Px(LINE_LENGTH),
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(GAP), // En-dessous du centre
+                // Segment BAS (vertical)
+                center.spawn(NodeBundle {
+                    style: Style {
+                        width: Val::Px(LINE_THICKNESS),
+                        height: Val::Px(LINE_LENGTH),
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(-LINE_THICKNESS / 2.0), // Centré horizontalement
+                        top: Val::Px(GAP),                     // En-dessous avec gap
+                        ..default()
+                    },
+                    background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
                     ..default()
-                },
-                background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
-                ..default()
-            });
+                });
 
-            // Segment GAUCHE
-            parent.spawn(NodeBundle {
-                style: Style {
-                    width: Val::Px(LINE_LENGTH),
-                    height: Val::Px(LINE_THICKNESS),
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(-GAP - LINE_LENGTH), // À gauche du centre
+                // Segment GAUCHE (horizontal)
+                center.spawn(NodeBundle {
+                    style: Style {
+                        width: Val::Px(LINE_LENGTH),
+                        height: Val::Px(LINE_THICKNESS),
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(-(GAP + LINE_LENGTH)),   // À gauche avec gap
+                        top: Val::Px(-LINE_THICKNESS / 2.0),  // Centré verticalement
+                        ..default()
+                    },
+                    background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
                     ..default()
-                },
-                background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
-                ..default()
-            });
+                });
 
-            // Segment DROITE
-            parent.spawn(NodeBundle {
-                style: Style {
-                    width: Val::Px(LINE_LENGTH),
-                    height: Val::Px(LINE_THICKNESS),
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(GAP), // À droite du centre
+                // Segment DROITE (horizontal)
+                center.spawn(NodeBundle {
+                    style: Style {
+                        width: Val::Px(LINE_LENGTH),
+                        height: Val::Px(LINE_THICKNESS),
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(GAP),                    // À droite avec gap
+                        top: Val::Px(-LINE_THICKNESS / 2.0),  // Centré verticalement
+                        ..default()
+                    },
+                    background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
                     ..default()
-                },
-                background_color: Color::srgba(1.0, 1.0, 1.0, 0.8).into(),
-                ..default()
+                });
             });
         });
 }
