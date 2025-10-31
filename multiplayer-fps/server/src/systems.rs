@@ -215,9 +215,10 @@ fn perform_raycast_hit(
 
             // AABB collision - dimensions ajustées pour correspondre au tank visuel
             // Tank visuel: châssis 1.2x0.4x1.8 + tourelle 0.8x0.5x0.8
-            let half_width = 0.6;   // Largeur réelle du tank (1.2m total)
-            let half_height = 0.5;  // Hauteur du tank (1.0m total, de 0.1 à 1.1)
-            let half_depth = 0.9;   // Profondeur du châssis (1.8m total)
+            // Augmenté de 15-20% pour avoir une marge de sécurité
+            let half_width = 0.7;   // 1.4m total (était 1.2m)
+            let half_height = 0.6;  // 1.2m total (était 1.0m)
+            let half_depth = 1.0;   // 2.0m total (était 1.8m)
 
             let dx = (current_pos.x - player_pos.x).abs();
             let dy = (current_pos.y - player_pos.y).abs();
