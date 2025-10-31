@@ -37,13 +37,6 @@ pub enum ServerMessage {
     MapData {
         data: Vec<u8>,
     },
-    // Un projectile a été créé
-    ProjectileSpawned {
-        projectile_id: u64,
-        shooter_id: u64,
-        position: [f32; 3],
-        direction: [f32; 3],
-    },
     // Un joueur a été touché
     PlayerDamaged {
         player_id: u64,

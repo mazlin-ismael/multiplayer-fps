@@ -120,25 +120,22 @@ pub fn handle_player_messages(
 
                     ClientMessage::Shoot { position, direction } => {
                         // Trouver le player_id correspondant
-                        if let Some(player_id) = registry.get_player_id_from_temp(client_id_u64) {
-                            // Créer le projectile
-                            let pos = Vec3::new(position[0], position[1], position[2]);
-                            let dir = Vec3::new(direction[0], direction[1], direction[2]);
-                            let projectile_id = projectiles.spawn_projectile(player_id, pos, dir);
+                        if let Some(shooter_id) = registry.get_player_id_from_temp(client_id_u64) {
+                            // RAYCAST instantané
+                            let start = Vec3::new(position[0], position[1], position[2]);
+                            let dir = Vec3::new(direction[0], direction[1], direction[2]).normalize();
 
-                            println!("Player {} shot projectile {} from {:?}", player_id, projectile_id, pos);
+                            println!("Player {} shooting raycast from {:?} dir {:?}", shooter_id, start, dir);
 
-                            // Informer tous les clients du nouveau projectile
-                            let projectile_message = ServerMessage::ProjectileSpawned {
-                                projectile_id,
-                                shooter_id: player_id,
-                                position,
-                                direction,
-                            };
-
-                            for other_client_id in server.clients_id() {
-                                server.send_message(other_client_id, DefaultChannel::ReliableOrdered, projectile_message.to_bytes());
-                            }
+                            // Vérifier le raycast contre les murs et les joueurs
+                            perform_raycast_hit(
+                                shooter_id,
+                                start,
+                                dir,
+                                &mut registry,
+                                &map,
+                                &mut server,
+                            );
                         }
                     }
                 }
@@ -147,8 +144,129 @@ pub fn handle_player_messages(
     }
 }
 
-// Système pour mettre à jour les projectiles et détecter les collisions
-pub fn update_projectiles_system(
+// Fonction pour effectuer un raycast et détecter ce qui est touché
+fn perform_raycast_hit(
+    shooter_id: u64,
+    start: Vec3,
+    direction: Vec3,
+    players: &mut ResMut<PlayerRegistry>,
+    map: &Res<GameMap>,
+    server: &mut ResMut<RenetServer>,
+) {
+    const MAX_RAYCAST_DISTANCE: f32 = 1000.0; // Portée maximale
+    const STEP_SIZE: f32 = 0.1; // Précision du raycast (10cm)
+
+    let mut current_pos = start;
+    let step = direction * STEP_SIZE;
+    let mut distance_traveled = 0.0;
+
+    // Marcher le long du rayon
+    while distance_traveled < MAX_RAYCAST_DISTANCE {
+        current_pos += step;
+        distance_traveled += STEP_SIZE;
+
+        // Vérifier collision avec les murs
+        let tile_x = current_pos.x.floor() as i32;
+        let tile_z = current_pos.z.floor() as i32;
+
+        if tile_x >= 0 && tile_x < map.width as i32 && tile_z >= 0 && tile_z < map.height as i32 {
+            let tile = map.tiles[tile_z as usize][tile_x as usize];
+            if tile as u8 == 1 { // Mur
+                println!("Raycast hit wall at ({}, {})", tile_x, tile_z);
+                return; // Le tir s'arrête au mur
+            }
+        } else {
+            // Sorti de la map
+            return;
+        }
+
+        // Vérifier collision avec les joueurs
+        for (player_id, player_state) in players.players.iter() {
+            // Ne pas toucher le tireur
+            if *player_id == shooter_id {
+                continue;
+            }
+
+            // Hitbox du tank
+            let player_pos = Vec3::new(
+                player_state.position[0],
+                player_state.position[1],
+                player_state.position[2],
+            );
+
+            // AABB collision
+            let half_width = 0.8;
+            let half_height = 0.9;
+            let half_depth = 1.0;
+
+            let dx = (current_pos.x - player_pos.x).abs();
+            let dy = (current_pos.y - player_pos.y).abs();
+            let dz = (current_pos.z - player_pos.z).abs();
+
+            if dx < half_width && dy < half_height && dz < half_depth {
+                // TOUCHÉ!
+                println!("Raycast hit player {} at {:?}", player_id, current_pos);
+
+                // Infliger 1 point de dégâts
+                if let Some((new_health, is_dead)) = players.damage_player(*player_id, 1) {
+                    // Informer tous les clients des dégâts
+                    let damage_message = ServerMessage::PlayerDamaged {
+                        player_id: *player_id,
+                        new_health,
+                        attacker_id: shooter_id,
+                    };
+
+                    for client_id in server.clients_id() {
+                        server.send_message(client_id, DefaultChannel::ReliableOrdered, damage_message.to_bytes());
+                    }
+
+                    // Si le joueur est mort
+                    if is_dead {
+                        println!("Player {} was killed by player {}", player_id, shooter_id);
+
+                        // Informer tous les clients de la mort
+                        let death_message = ServerMessage::PlayerDied {
+                            player_id: *player_id,
+                            killer_id: shooter_id,
+                        };
+
+                        for client_id in server.clients_id() {
+                            server.send_message(client_id, DefaultChannel::ReliableOrdered, death_message.to_bytes());
+                        }
+
+                        // Le tueur récupère 1 point de vie
+                        players.heal_player(shooter_id, 1);
+
+                        // Respawn le joueur mort
+                        if let Some(spawn_index) = players.get_spawn_index(*player_id) {
+                            let respawn_map = GameMap::from_global().with_spawn_position(spawn_index);
+                            let spawn_pos = [respawn_map.spawn_x, 1.7, respawn_map.spawn_z];
+                            players.respawn_player(*player_id, spawn_pos);
+
+                            // Informer tous les clients du respawn
+                            let respawn_message = ServerMessage::PlayerRespawned {
+                                player_id: *player_id,
+                                position: spawn_pos,
+                                health: 3,
+                            };
+
+                            for client_id in server.clients_id() {
+                                server.send_message(client_id, DefaultChannel::ReliableOrdered, respawn_message.to_bytes());
+                            }
+                        }
+                    }
+                }
+
+                return; // Le tir s'arrête au premier joueur touché
+            }
+        }
+    }
+
+    println!("Raycast missed - max distance reached");
+}
+
+// ANCIEN système de projectiles - maintenant inutilisé
+pub fn _old_update_projectiles_system(
     time: Res<Time>,
     mut server: ResMut<RenetServer>,
     mut projectiles: ResMut<ProjectileRegistry>,

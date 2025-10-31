@@ -160,9 +160,6 @@ pub fn receive_other_players_system(
                 ServerMessage::MapData { .. } => {
                     // Déjà géré dans receive_map_system
                 }
-
-                // Ignorer les messages de projectiles (gérés dans shooting.rs)
-                ServerMessage::ProjectileSpawned { .. } => {}
             }
         }
     }

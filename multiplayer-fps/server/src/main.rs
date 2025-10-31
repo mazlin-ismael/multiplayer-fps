@@ -7,7 +7,7 @@ use bevy::MinimalPlugins;
 use bevy_renet::{RenetServerPlugin, transport::NetcodeServerPlugin};
 
 use network::create_network_resources;
-use player::{PlayerRegistry, ProjectileRegistry};
+use player::PlayerRegistry;
 use systems::*;
 
 fn main() {
@@ -21,10 +21,8 @@ fn main() {
         .insert_resource(server)
         .insert_resource(transport)
         .insert_resource(PlayerRegistry::default())
-        .insert_resource(ProjectileRegistry::default())
         .insert_resource(game_map)
         .add_systems(Update, handle_connection_events)
-        .add_systems(Update, handle_player_messages) // NOUVEAU
-        .add_systems(Update, update_projectiles_system) // Système de projectiles
+        .add_systems(Update, handle_player_messages) // Messages des joueurs (mouvements + tirs raycast)
         .run();
 }
