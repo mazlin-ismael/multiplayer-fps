@@ -203,17 +203,20 @@ fn perform_raycast_hit(
                 continue;
             }
 
-            // Hitbox du tank
+            // Hitbox du tank - CORRIGÉ pour correspondre au tank visuel
+            // La position du joueur est à y=1.7 (caméra), mais le tank visuel est plus bas
+            // Tank visuel: de ~0.2m à ~1.0m → centre à 0.6m
+            // Offset: 1.7 - 0.6 = 1.1m
             let player_pos = Vec3::new(
                 player_state.position[0],
-                player_state.position[1],
+                player_state.position[1] - 1.1,  // Décaler la hitbox vers le bas
                 player_state.position[2],
             );
 
             // AABB collision - dimensions ajustées pour correspondre au tank visuel
             // Tank visuel: châssis 1.2x0.4x1.8 + tourelle 0.8x0.5x0.8
             let half_width = 0.6;   // Largeur réelle du tank (1.2m total)
-            let half_height = 0.5;  // Hauteur approximative du tank (1.0m total)
+            let half_height = 0.5;  // Hauteur du tank (1.0m total, de 0.1 à 1.1)
             let half_depth = 0.9;   // Profondeur du châssis (1.8m total)
 
             let dx = (current_pos.x - player_pos.x).abs();
