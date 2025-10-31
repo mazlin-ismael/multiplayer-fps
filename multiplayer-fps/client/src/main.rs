@@ -3,6 +3,7 @@ mod input;
 mod scene;
 mod other_players; // NOUVEAU
 mod player_model; // Modèles 3D des joueurs
+mod shooting; // Système de tir
 
 use bevy::prelude::*;
 use bevy_renet::{RenetClientPlugin, transport::NetcodeClientPlugin};
@@ -12,7 +13,8 @@ use bevy_rapier3d::prelude::*;
 use input::{get_server_address, get_player_name};
 use network::{create_network_resources, check_connection, ConnectionState, CurrentMap, receive_map_system};
 use scene::{MapSpawned, spawn_map_if_received_system, spawn_camera_system, fps_controller_system, NetworkUpdateTimer, send_player_movement_system};
-use other_players::{OtherPlayers, receive_other_players_system}; // NOUVEAU
+use other_players::{OtherPlayers, receive_other_players_system, damage_flash_system}; // NOUVEAU
+use shooting::{ServerProjectiles, shoot_system, update_projectiles_system}; // Système de tir
 
 fn main() {
     let addr = get_server_address();
@@ -40,6 +42,7 @@ fn main() {
         .insert_resource(CursorLocked(false))
         .insert_resource(NetworkUpdateTimer::default())
         .insert_resource(OtherPlayers::default()) // NOUVEAU
+        .insert_resource(ServerProjectiles::default()) // Système de tir
         .add_systems(Update, handle_cursor_locking)
         .add_systems(Update, toggle_cursor_on_escape)
         .add_systems(Update, lock_on_click)
@@ -49,6 +52,9 @@ fn main() {
         .add_systems(Update, check_connection)
         .add_systems(Update, (spawn_map_if_received_system, spawn_camera_system, fps_controller_system))
         .add_systems(Update, send_player_movement_system)
+        .add_systems(Update, shoot_system) // Système de tir
+        .add_systems(Update, update_projectiles_system) // Déplacement des projectiles
+        .add_systems(Update, damage_flash_system) // Effet visuel de dommage
         .run();
 }
 

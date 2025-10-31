@@ -3,11 +3,45 @@ use shared::PlayerBundle;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
+pub struct Projectile {
+    pub id: u64,
+    pub shooter_id: u64,
+    pub position: Vec3,
+    pub velocity: Vec3,
+    pub lifetime: f32,
+}
+
+#[derive(Resource, Default)]
+pub struct ProjectileRegistry {
+    pub projectiles: HashMap<u64, Projectile>,
+    pub next_id: u64,
+}
+
+impl ProjectileRegistry {
+    pub fn spawn_projectile(&mut self, shooter_id: u64, position: Vec3, direction: Vec3) -> u64 {
+        let projectile_id = self.next_id;
+        self.next_id += 1;
+
+        let projectile = Projectile {
+            id: projectile_id,
+            shooter_id,
+            position,
+            velocity: direction.normalize() * 50.0, // 50 m/s
+            lifetime: 5.0, // 5 secondes
+        };
+
+        self.projectiles.insert(projectile_id, projectile);
+        projectile_id
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct PlayerState {
     pub entity: Entity,
     pub name: String,
     pub position: [f32; 3],
     pub rotation: [f32; 2], // yaw, pitch
+    pub health: u8, // Points de vie (max 3)
 }
 
 #[derive(Resource, Default)]
@@ -35,6 +69,7 @@ impl PlayerRegistry {
             name: name.clone(),
             position: [0.0, 0.0, 0.0], // Sera mis à jour
             rotation: [0.0, 0.0],
+            health: 3, // 3 points de vie au départ
         };
 
         self.players.insert(player_id, state);
@@ -81,6 +116,31 @@ impl PlayerRegistry {
                 commands.entity(state.entity).despawn();
                 println!("Player {} removed (temp_id: {})", player_id, temp_id);
             }
+        }
+    }
+
+    // Infliger des dégâts à un joueur
+    pub fn damage_player(&mut self, player_id: u64, damage: u8) -> Option<(u8, bool)> {
+        if let Some(state) = self.players.get_mut(&player_id) {
+            state.health = state.health.saturating_sub(damage);
+            let is_dead = state.health == 0;
+            return Some((state.health, is_dead));
+        }
+        None
+    }
+
+    // Soigner un joueur
+    pub fn heal_player(&mut self, player_id: u64, amount: u8) {
+        if let Some(state) = self.players.get_mut(&player_id) {
+            state.health = (state.health + amount).min(3); // Max 3 coeurs
+        }
+    }
+
+    // Respawn un joueur
+    pub fn respawn_player(&mut self, player_id: u64, position: [f32; 3]) {
+        if let Some(state) = self.players.get_mut(&player_id) {
+            state.health = 3;
+            state.position = position;
         }
     }
 }
