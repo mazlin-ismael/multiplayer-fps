@@ -30,8 +30,22 @@ impl Default for ShootCooldown {
 #[derive(Component)]
 pub struct ReloadIndicator;
 
+// Resource pour savoir si l'indicateur a été créé
+#[derive(Resource, Default)]
+pub struct ReloadIndicatorSpawned(pub bool);
+
 // Système pour créer l'indicateur de reload
-pub fn setup_reload_indicator(mut commands: Commands) {
+pub fn setup_reload_indicator(
+    mut commands: Commands,
+    mut spawned: ResMut<ReloadIndicatorSpawned>,
+    cameras: Query<&Camera>,
+) {
+    // Ne créer qu'une seule fois et seulement si une caméra existe
+    if spawned.0 || cameras.is_empty() {
+        return;
+    }
+
+    spawned.0 = true;
     // Barre de reload en bas au centre de l'écran
     commands.spawn(NodeBundle {
         style: Style {
