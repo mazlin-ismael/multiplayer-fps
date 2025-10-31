@@ -207,7 +207,9 @@ pub fn fps_controller_system(
                 let sensitivity = 0.002;
                 ctrl.yaw -= ev.delta.x * sensitivity;
                 ctrl.pitch -= ev.delta.y * sensitivity;
-                ctrl.pitch = ctrl.pitch.clamp(-1.54, 1.54);
+                // Limiter le pitch du canon du tank à ±30° (±0.52 radians)
+                const MAX_PITCH: f32 = 0.52;
+                ctrl.pitch = ctrl.pitch.clamp(-MAX_PITCH, MAX_PITCH);
             }
 
             let yaw_rot = Quat::from_axis_angle(Vec3::Y, ctrl.yaw);
