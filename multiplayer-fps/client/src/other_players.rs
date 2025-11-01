@@ -205,7 +205,8 @@ pub fn receive_other_players_system(
                         if player_scores.local_player_id.is_none() {
                             player_scores.local_player_id = Some(player_id);
                             // Initialiser le score du joueur local avec son vrai nom
-                            player_scores.scores.insert(player_id, (player_scores.local_player_name.clone(), 0));
+                            let name = player_scores.local_player_name.clone();
+                            player_scores.scores.insert(player_id, (name, 0));
                         }
 
                         // Mettre à jour la santé locale
@@ -242,7 +243,8 @@ pub fn receive_other_players_system(
                         if player_scores.local_player_id.is_none() {
                             player_scores.local_player_id = Some(player_id);
                             // Initialiser le score du joueur local avec son vrai nom
-                            player_scores.scores.insert(player_id, (player_scores.local_player_name.clone(), 0));
+                            let name = player_scores.local_player_name.clone();
+                            player_scores.scores.insert(player_id, (name, 0));
                         }
 
                         // Mettre à jour la santé locale
@@ -269,7 +271,8 @@ pub fn receive_other_players_system(
                         }
 
                         // Mettre à jour ou insérer le score du joueur local avec son vrai nom
-                        player_scores.scores.insert(player_id, (player_scores.local_player_name.clone(), new_score));
+                        let name = player_scores.local_player_name.clone();
+                        player_scores.scores.insert(player_id, (name, new_score));
                         println!("LOCAL PLAYER score updated to {}!", new_score);
                     } else {
                         // C'est un autre joueur
@@ -285,10 +288,6 @@ pub fn receive_other_players_system(
                             }
                         }
                     }
-                }
-
-                ServerMessage::MapData { .. } => {
-                    // Déjà géré dans receive_map_system
                 }
             }
         }
