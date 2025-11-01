@@ -153,18 +153,41 @@ fn check_collision_at_position(pos: Vec3, rotation: Quat, map: &shared::GameMap)
     // CHASSIS: 1.2m large × 1.8m profond
     // CHENILLES: ajoutent 0.125m de chaque côté (0.65 + 0.075 = 0.725m du centre)
     // Total: 1.45m de largeur, 1.8m de profondeur
+    // MARGES: +0.1m de sécurité pour éviter les glissements dans les murs
 
-    // Points de collision en coordonnées LOCALES du tank (avant rotation)
+    // Points de collision AUGMENTÉS pour meilleure précision (21 points)
+    // Marges augmentées: ±0.85m en x (au lieu de 0.75), ±1.0m en z (au lieu de 0.9)
     let local_check_points = [
-        Vec3::new(0.0, 0.0, 0.0),      // Centre
-        Vec3::new(0.75, 0.0, 0.9),     // Avant-droit (local)
-        Vec3::new(-0.75, 0.0, 0.9),    // Avant-gauche (local)
-        Vec3::new(0.75, 0.0, -0.9),    // Arrière-droit (local)
-        Vec3::new(-0.75, 0.0, -0.9),   // Arrière-gauche (local)
-        Vec3::new(0.75, 0.0, 0.0),     // Milieu-droit (local)
-        Vec3::new(-0.75, 0.0, 0.0),    // Milieu-gauche (local)
-        Vec3::new(0.0, 0.0, 0.9),      // Milieu-avant (local)
-        Vec3::new(0.0, 0.0, -0.9),     // Milieu-arrière (local)
+        // Centre
+        Vec3::new(0.0, 0.0, 0.0),
+
+        // 4 Coins (avec marge de sécurité)
+        Vec3::new(0.85, 0.0, 1.0),      // Avant-droit
+        Vec3::new(-0.85, 0.0, 1.0),     // Avant-gauche
+        Vec3::new(0.85, 0.0, -1.0),     // Arrière-droit
+        Vec3::new(-0.85, 0.0, -1.0),    // Arrière-gauche
+
+        // 4 Milieux des côtés
+        Vec3::new(0.85, 0.0, 0.0),      // Milieu-droit
+        Vec3::new(-0.85, 0.0, 0.0),     // Milieu-gauche
+        Vec3::new(0.0, 0.0, 1.0),       // Milieu-avant
+        Vec3::new(0.0, 0.0, -1.0),      // Milieu-arrière
+
+        // 8 Points intermédiaires pour couvrir les côtés (évite glissement)
+        Vec3::new(0.85, 0.0, 0.5),      // Quart avant-droit
+        Vec3::new(0.85, 0.0, -0.5),     // Quart arrière-droit
+        Vec3::new(-0.85, 0.0, 0.5),     // Quart avant-gauche
+        Vec3::new(-0.85, 0.0, -0.5),    // Quart arrière-gauche
+        Vec3::new(0.42, 0.0, 1.0),      // Quart avant-droit (avant)
+        Vec3::new(-0.42, 0.0, 1.0),     // Quart avant-gauche (avant)
+        Vec3::new(0.42, 0.0, -1.0),     // Quart arrière-droit (arrière)
+        Vec3::new(-0.42, 0.0, -1.0),    // Quart arrière-gauche (arrière)
+
+        // 4 Points supplémentaires aux positions critiques
+        Vec3::new(0.6, 0.0, 0.7),       // Avant-droit intérieur
+        Vec3::new(-0.6, 0.0, 0.7),      // Avant-gauche intérieur
+        Vec3::new(0.6, 0.0, -0.7),      // Arrière-droit intérieur
+        Vec3::new(-0.6, 0.0, -0.7),     // Arrière-gauche intérieur
     ];
 
     for local_offset in &local_check_points {

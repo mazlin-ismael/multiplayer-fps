@@ -61,9 +61,7 @@ pub fn setup_hud(
             position_type: PositionType::Absolute,
             left: Val::Px(20.0),
             bottom: Val::Px(20.0),
-            width: Val::Px(180.0),
-            height: Val::Px(50.0),
-            padding: UiRect::all(Val::Px(10.0)),
+            padding: UiRect::all(Val::Px(8.0)),
             flex_direction: FlexDirection::Column,
             ..default()
         },
