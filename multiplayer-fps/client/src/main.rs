@@ -18,7 +18,7 @@ use scene::{MapSpawned, spawn_map_if_received_system, spawn_camera_system, fps_c
 use other_players::{OtherPlayers, PlayerScores, receive_other_players_system, damage_flash_system}; // NOUVEAU
 use shooting::{shoot_system, update_visual_projectiles, ShootCooldown, setup_reload_indicator, update_reload_indicator, ReloadIndicatorSpawned}; // Système de tir (raycast)
 use crosshair::{setup_crosshair, CrosshairSpawned}; // Crosshair UI
-use ui_hud::{setup_hud, update_health_indicator, update_scoreboard, update_minimap, HudSpawned, LocalPlayerHealth}; // HUD
+use ui_hud::{setup_hud, update_health_indicator, update_scoreboard, update_minimap, generate_minimap_tiles, HudSpawned, LocalPlayerHealth, MinimapTilesGenerated}; // HUD
 
 fn main() {
     let addr = get_server_address();
@@ -52,9 +52,11 @@ fn main() {
         .insert_resource(ShootCooldown::default()) // Cooldown de tir
         .insert_resource(HudSpawned::default()) // HUD spawned flag
         .insert_resource(LocalPlayerHealth::default()) // Santé du joueur local
+        .insert_resource(MinimapTilesGenerated::default()) // Minimap tiles generated flag
         .add_systems(Update, setup_reload_indicator) // Indicateur de reload (après caméra)
         .add_systems(Update, setup_crosshair) // Crosshair UI (après caméra)
         .add_systems(Update, setup_hud) // HUD (après caméra)
+        .add_systems(Update, generate_minimap_tiles) // Générer les tuiles de la minimap
         .add_systems(Update, update_reload_indicator) // MAJ indicateur reload
         .add_systems(Update, update_health_indicator) // MAJ indicateur de vie
         .add_systems(Update, update_scoreboard) // MAJ scoreboard

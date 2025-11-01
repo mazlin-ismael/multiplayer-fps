@@ -14,9 +14,17 @@ pub struct ScoreboardText;
 #[derive(Component)]
 pub struct Minimap;
 
+// Component pour marquer les tuiles de la minimap (générées une fois)
+#[derive(Component)]
+pub struct MinimapTile;
+
 // Component pour marquer le point du joueur sur la minimap
 #[derive(Component)]
 pub struct MinimapPlayerDot;
+
+// Resource pour savoir si les tuiles de la minimap ont été générées
+#[derive(Resource, Default)]
+pub struct MinimapTilesGenerated(pub bool);
 
 // Resource pour tracker la health locale
 #[derive(Resource)]
@@ -134,6 +142,7 @@ pub fn setup_hud(
                     ..default()
                 },
                 background_color: Color::srgb(0.0, 1.0, 0.0).into(), // Vert pour le joueur
+                z_index: ZIndex::Global(100), // Au-dessus des tuiles
                 ..default()
             },
             MinimapPlayerDot,
@@ -183,6 +192,60 @@ pub fn update_scoreboard(
         };
 
         text.sections[0].value = format!("{}\nYou: {}", top_text, local_score);
+    }
+}
+
+/// Système pour générer les tuiles de la minimap (une seule fois)
+pub fn generate_minimap_tiles(
+    mut commands: Commands,
+    mut generated: ResMut<MinimapTilesGenerated>,
+    map: Res<crate::network::CurrentMap>,
+    minimap_query: Query<Entity, With<Minimap>>,
+) {
+    // Ne générer qu'une seule fois et seulement si la map est disponible
+    if generated.0 {
+        return;
+    }
+
+    if let Some(game_map) = &map.0 {
+        if let Ok(minimap_entity) = minimap_query.get_single() {
+            const MINIMAP_SIZE: f32 = 200.0;
+            let tile_size = MINIMAP_SIZE / game_map.width as f32;
+
+            // Créer une tuile pour chaque case de la map
+            for y in 0..game_map.height {
+                for x in 0..game_map.width {
+                    let tile_type = game_map.tiles[y][x];
+
+                    // Couleur selon le type de tuile
+                    let color = match tile_type as u8 {
+                        1 => Color::srgba(0.8, 0.8, 0.8, 0.9), // Mur = gris clair
+                        _ => Color::srgba(0.1, 0.1, 0.1, 0.5), // Sol = gris très foncé (transparent)
+                    };
+
+                    commands.entity(minimap_entity).with_children(|parent| {
+                        parent.spawn((
+                            NodeBundle {
+                                style: Style {
+                                    position_type: PositionType::Absolute,
+                                    left: Val::Px(x as f32 * tile_size),
+                                    top: Val::Px(y as f32 * tile_size),
+                                    width: Val::Px(tile_size),
+                                    height: Val::Px(tile_size),
+                                    ..default()
+                                },
+                                background_color: color.into(),
+                                ..default()
+                            },
+                            MinimapTile,
+                        ));
+                    });
+                }
+            }
+
+            generated.0 = true;
+            println!("Minimap tiles generated: {}x{}", game_map.width, game_map.height);
+        }
     }
 }
 
