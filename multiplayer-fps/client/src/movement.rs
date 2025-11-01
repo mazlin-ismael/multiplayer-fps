@@ -146,12 +146,54 @@ impl Default for FpsController {
     }
 }
 
+/// Vérifie si une position collidrait avec un mur
+fn check_collision_at_position(pos: Vec3, map: &shared::GameMap) -> bool {
+    // Dimensions du tank (en mètres)
+    // CHASSIS: 1.2m large × 1.8m profond
+    // CHENILLES: ajoutent 0.125m de chaque côté (0.65 + 0.075 = 0.725m du centre)
+    // Total: 1.45m de largeur, 1.8m de profondeur
+
+    // On vérifie 8 points autour du tank + le centre (9 points au total)
+    // Rayon de collision: 0.8m pour couvrir les chenilles et le châssis
+    let check_points = [
+        Vec3::new(0.0, 0.0, 0.0),      // Centre
+        Vec3::new(0.75, 0.0, 0.9),     // Avant-droit
+        Vec3::new(-0.75, 0.0, 0.9),    // Avant-gauche
+        Vec3::new(0.75, 0.0, -0.9),    // Arrière-droit
+        Vec3::new(-0.75, 0.0, -0.9),   // Arrière-gauche
+        Vec3::new(0.75, 0.0, 0.0),     // Milieu-droit
+        Vec3::new(-0.75, 0.0, 0.0),    // Milieu-gauche
+        Vec3::new(0.0, 0.0, 0.9),      // Milieu-avant
+        Vec3::new(0.0, 0.0, -0.9),     // Milieu-arrière
+    ];
+
+    for offset in &check_points {
+        let check_pos = pos + *offset;
+        let tile_x = check_pos.x.floor() as i32;
+        let tile_z = check_pos.z.floor() as i32;
+
+        // Vérifier si on est dans les limites de la map
+        if tile_x < 0 || tile_x >= map.width as i32 || tile_z < 0 || tile_z >= map.height as i32 {
+            return true; // Hors limites = collision
+        }
+
+        // Vérifier si c'est un mur
+        let tile = map.tiles[tile_z as usize][tile_x as usize];
+        if tile as u8 == 1 { // Mur
+            return true;
+        }
+    }
+
+    false // Pas de collision
+}
+
 pub fn fps_controller_system(
     time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
     mut mouse_motion: EventReader<MouseMotion>,
     mut query: Query<(&mut Transform, &mut FpsController)>,
     cursor_state: Res<CursorState>,
+    current_map: Res<CurrentMap>,
 ) {
     for (mut transform, mut ctrl) in query.iter_mut() {
         // rotation seulement si le curseur est verrouillé
@@ -168,7 +210,7 @@ pub fn fps_controller_system(
         let pitch_rot = Quat::from_axis_angle(Vec3::X, ctrl.pitch);
         transform.rotation = yaw_rot * pitch_rot;
 
-        // déplacement
+        // déplacement avec détection de collision
         let mut dir = Vec3::ZERO;
         if keyboard.pressed(KeyCode::KeyW) {
             dir.z -= 1.0;
@@ -191,7 +233,20 @@ pub fn fps_controller_system(
 
         if dir.length_squared() > 0.0 {
             let forward = transform.rotation * dir.normalize();
-            transform.translation += forward * ctrl.speed * time.delta_seconds();
+            let movement = forward * ctrl.speed * time.delta_seconds();
+            let new_position = transform.translation + movement;
+
+            // Vérifier la collision seulement si on a une map
+            if let Some(map) = &current_map.0 {
+                if !check_collision_at_position(new_position, map) {
+                    // Pas de collision, on peut bouger
+                    transform.translation = new_position;
+                }
+                // Sinon, on ne bouge pas (collision détectée)
+            } else {
+                // Pas de map chargée, on autorise le mouvement
+                transform.translation = new_position;
+            }
         }
     }
 }

@@ -122,6 +122,41 @@ pub fn handle_connection_events(
     }
 }
 
+/// Vérifie si une position collidrait avec un mur (validation serveur)
+fn check_collision_at_position(pos: Vec3, map: &GameMap) -> bool {
+    // Dimensions du tank (identique au client)
+    let check_points = [
+        Vec3::new(0.0, 0.0, 0.0),      // Centre
+        Vec3::new(0.75, 0.0, 0.9),     // Avant-droit
+        Vec3::new(-0.75, 0.0, 0.9),    // Avant-gauche
+        Vec3::new(0.75, 0.0, -0.9),    // Arrière-droit
+        Vec3::new(-0.75, 0.0, -0.9),   // Arrière-gauche
+        Vec3::new(0.75, 0.0, 0.0),     // Milieu-droit
+        Vec3::new(-0.75, 0.0, 0.0),    // Milieu-gauche
+        Vec3::new(0.0, 0.0, 0.9),      // Milieu-avant
+        Vec3::new(0.0, 0.0, -0.9),     // Milieu-arrière
+    ];
+
+    for offset in &check_points {
+        let check_pos = pos + *offset;
+        let tile_x = check_pos.x.floor() as i32;
+        let tile_z = check_pos.z.floor() as i32;
+
+        // Vérifier limites
+        if tile_x < 0 || tile_x >= map.width as i32 || tile_z < 0 || tile_z >= map.height as i32 {
+            return true;
+        }
+
+        // Vérifier mur
+        let tile = map.tiles[tile_z as usize][tile_x as usize];
+        if tile as u8 == 1 {
+            return true;
+        }
+    }
+
+    false
+}
+
 // NOUVEAU : Recevoir les mouvements des clients et les broadcaster
 pub fn handle_player_messages(
     mut server: ResMut<RenetServer>,
@@ -140,7 +175,15 @@ pub fn handle_player_messages(
                     ClientMessage::PlayerMovement { position, rotation } => {
                         // Trouver le player_id correspondant
                         if let Some(player_id) = registry.get_player_id_from_temp(client_id_u64) {
-                            // Mettre à jour la position du joueur
+                            // VALIDATION: Vérifier que la position ne collide pas avec un mur
+                            let pos_vec = Vec3::new(position[0], position[1], position[2]);
+                            if check_collision_at_position(pos_vec, &map) {
+                                // Position invalide (dans un mur), ignorer ce mouvement
+                                println!("Player {} tried to move into wall at {:?}, rejecting", player_id, position);
+                                continue;
+                            }
+
+                            // Position valide, mettre à jour
                             registry.update_player_position(player_id, position, rotation);
 
                             // Broadcaster à tous les AUTRES clients
