@@ -49,6 +49,7 @@ pub fn receive_other_players_system(
     mut commands: Commands,
     mut other_players: ResMut<OtherPlayers>,
     mut player_scores: ResMut<PlayerScores>,
+    mut local_health: ResMut<crate::ui_hud::LocalPlayerHealth>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut player_query: Query<&mut OtherPlayer>,
@@ -164,8 +165,9 @@ pub fn receive_other_players_system(
                 ServerMessage::PlayerDamaged { player_id, new_health, attacker_id } => {
                     println!("Player {} damaged by {} - new health: {}", player_id, attacker_id, new_health);
 
-                    // Mettre à jour la santé et ajouter l'effet de flash rouge
+                    // Vérifier si c'est nous ou un autre joueur
                     if let Some(&entity) = other_players.players.get(&player_id) {
+                        // C'est un autre joueur
                         // Mettre à jour la santé
                         if let Ok(mut other_player) = player_query.get_mut(entity) {
                             other_player.health = new_health;
@@ -175,6 +177,18 @@ pub fn receive_other_players_system(
                         commands.entity(entity).insert(DamageFlash {
                             timer: Timer::from_seconds(0.3, TimerMode::Once),
                         });
+                    } else {
+                        // C'est le joueur local qui a été touché
+                        // Définir le player_id local si pas encore fait
+                        if player_scores.local_player_id.is_none() {
+                            player_scores.local_player_id = Some(player_id);
+                            // Initialiser le score du joueur local
+                            player_scores.scores.insert(player_id, ("You".to_string(), 0));
+                        }
+
+                        // Mettre à jour la santé locale
+                        local_health.health = new_health;
+                        println!("LOCAL PLAYER damaged! New health: {}", new_health);
                     }
                 }
 
@@ -188,8 +202,9 @@ pub fn receive_other_players_system(
                 ServerMessage::PlayerRespawned { player_id, position, health } => {
                     println!("Player {} respawned at {:?} with {} health", player_id, position, health);
 
-                    // Mettre à jour la position et la santé
+                    // Vérifier si c'est nous ou un autre joueur
                     if let Some(&entity) = other_players.players.get(&player_id) {
+                        // C'est un autre joueur
                         if let Ok(mut tank_transform) = transform_query.get_mut(entity) {
                             tank_transform.translation = Vec3::new(position[0], position[1], position[2]);
                         }
@@ -199,6 +214,18 @@ pub fn receive_other_players_system(
 
                         // Retirer le flash de dommage s'il existe
                         commands.entity(entity).remove::<DamageFlash>();
+                    } else {
+                        // C'est le joueur local qui respawn
+                        // Définir le player_id local si pas encore fait
+                        if player_scores.local_player_id.is_none() {
+                            player_scores.local_player_id = Some(player_id);
+                            // Initialiser le score du joueur local
+                            player_scores.scores.insert(player_id, ("You".to_string(), 0));
+                        }
+
+                        // Mettre à jour la santé locale
+                        local_health.health = health;
+                        println!("LOCAL PLAYER respawned with {} health!", health);
                     }
                 }
 
