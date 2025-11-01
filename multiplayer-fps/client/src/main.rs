@@ -18,7 +18,7 @@ use scene::{MapSpawned, spawn_map_if_received_system, spawn_camera_system, fps_c
 use other_players::{OtherPlayers, PlayerScores, receive_other_players_system, damage_flash_system}; // NOUVEAU
 use shooting::{shoot_system, update_visual_projectiles, ShootCooldown, setup_reload_indicator, update_reload_indicator, ReloadIndicatorSpawned}; // Système de tir (raycast)
 use crosshair::{setup_crosshair, CrosshairSpawned}; // Crosshair UI
-use ui_hud::{setup_hud, update_health_indicator, update_scoreboard, update_minimap, generate_minimap_tiles, HudSpawned, LocalPlayerHealth, MinimapTilesGenerated}; // HUD
+use ui_hud::{setup_hud, update_health_indicator, update_scoreboard, update_minimap, update_fps_indicator, generate_minimap_tiles, HudSpawned, LocalPlayerHealth, MinimapTilesGenerated}; // HUD
 
 fn main() {
     let addr = get_server_address();
@@ -61,6 +61,7 @@ fn main() {
         .add_systems(Update, update_health_indicator) // MAJ indicateur de vie
         .add_systems(Update, update_scoreboard) // MAJ scoreboard
         .add_systems(Update, update_minimap) // MAJ minimap
+        .add_systems(Update, update_fps_indicator) // MAJ indicateur FPS
         .add_systems(Update, handle_cursor_locking)
         .add_systems(Update, toggle_cursor_on_escape)
         .add_systems(Update, lock_on_click)

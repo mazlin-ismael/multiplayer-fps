@@ -22,6 +22,10 @@ pub struct MinimapTile;
 #[derive(Component)]
 pub struct MinimapPlayerDot;
 
+// Component pour marquer l'indicateur FPS
+#[derive(Component)]
+pub struct FpsIndicator;
+
 // Resource pour savoir si les tuiles de la minimap ont été générées
 #[derive(Resource, Default)]
 pub struct MinimapTilesGenerated(pub bool);
@@ -157,6 +161,32 @@ pub fn setup_hud(
             MinimapPlayerDot,
         ));
     });
+
+    // === FPS INDICATOR (en haut à droite, sous la minimap) ===
+    commands.spawn(NodeBundle {
+        style: Style {
+            position_type: PositionType::Absolute,
+            right: Val::Px(20.0),
+            top: Val::Px(MINIMAP_SIZE + 30.0), // Juste en dessous de la minimap
+            padding: UiRect::all(Val::Px(8.0)),
+            ..default()
+        },
+        background_color: Color::srgba(0.1, 0.1, 0.1, 0.8).into(),
+        ..default()
+    })
+    .with_children(|parent| {
+        parent.spawn((
+            TextBundle::from_section(
+                "FPS: 60",
+                TextStyle {
+                    font_size: 16.0,
+                    color: Color::srgb(0.0, 1.0, 0.0),
+                    ..default()
+                },
+            ),
+            FpsIndicator,
+        ));
+    });
 }
 
 /// Système pour mettre à jour l'indicateur de vie
@@ -287,5 +317,35 @@ pub fn update_minimap(
                 dot_style.top = Val::Px(minimap_z - 3.0);
             }
         }
+    }
+}
+
+/// Système pour mettre à jour l'indicateur FPS
+pub fn update_fps_indicator(
+    time: Res<Time>,
+    mut query: Query<&mut Text, With<FpsIndicator>>,
+) {
+    if let Ok(mut text) = query.get_single_mut() {
+        // Calculer FPS à partir du delta_seconds
+        let fps = if time.delta_seconds() > 0.0 {
+            1.0 / time.delta_seconds()
+        } else {
+            0.0
+        };
+
+        // Arrondir à l'entier
+        let fps_rounded = fps.round() as u32;
+
+        // Couleur selon le FPS
+        let fps_color = if fps_rounded >= 60 {
+            Color::srgb(0.0, 1.0, 0.0) // Vert si >= 60 FPS
+        } else if fps_rounded >= 30 {
+            Color::srgb(1.0, 0.8, 0.0) // Jaune si >= 30 FPS
+        } else {
+            Color::srgb(1.0, 0.0, 0.0) // Rouge si < 30 FPS
+        };
+
+        text.sections[0].value = format!("FPS: {}", fps_rounded);
+        text.sections[0].style.color = fps_color;
     }
 }
