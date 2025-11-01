@@ -59,18 +59,20 @@ pub const MAP_DATA: &[&[u8]] = &[
     &[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
 
-// Positions de spawn prédéfinies (10 positions stratégiques, bien centrées)
+// Positions de spawn prédéfinies (10 positions validées sans collision)
+// Chaque position a été testée pour s'assurer qu'aucune partie du tank (chenilles comprises)
+// ne touche un mur lors du spawn
 pub const SPAWN_POINTS: &[(f32, f32)] = &[
-    (3.5, 2.5),    // #1 Haut-gauche (zone dégagée)
-    (15.0, 2.5),   // #2 Haut-centre (zone dégagée)
-    (26.5, 2.5),   // #3 Haut-droite (zone dégagée)
-    (3.5, 11.0),   // #4 Centre-gauche (zone dégagée)
-    (15.0, 14.0),  // #5 Centre-centre (grande zone ouverte)
-    (26.5, 11.0),  // #6 Centre-droite (zone dégagée)
-    (3.5, 22.5),   // #7 Bas-gauche (zone dégagée)
-    (15.0, 22.5),  // #8 Bas-centre (zone dégagée)
-    (26.5, 22.5),  // #9 Bas-droite (zone dégagée)
-    (7.5, 15.0),   // #10 Zone centrale ouverte gauche
+    (11.5, 5.5),   // #1 Haut-centre gauche
+    (17.5, 5.5),   // #2 Haut-centre droite
+    (3.5, 11.0),   // #3 Milieu-gauche
+    (11.5, 11.0),  // #4 Milieu-centre gauche
+    (15.0, 14.0),  // #5 Centre (grande zone ouverte)
+    (22.5, 11.0),  // #6 Milieu-centre droite
+    (26.5, 11.0),  // #7 Milieu-droite
+    (7.5, 15.0),   // #8 Centre-gauche
+    (17.5, 15.0),  // #9 Centre-droite
+    (11.5, 19.5),  // #10 Bas-centre gauche
 ];
 
 impl GameMap {
