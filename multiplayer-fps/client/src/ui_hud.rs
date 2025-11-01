@@ -82,18 +82,10 @@ pub fn setup_hud(
                     },
                 ),
                 TextSection::new(
-                    "3/3\n",
+                    "3/3",
                     TextStyle {
                         font_size: 16.0,
                         color: Color::srgb(0.0, 1.0, 0.0),
-                        ..default()
-                    },
-                ),
-                TextSection::new(
-                    "♥ ♥ ♥",
-                    TextStyle {
-                        font_size: 20.0,
-                        color: Color::srgb(1.0, 0.2, 0.2),
                         ..default()
                     },
                 ),
@@ -175,13 +167,6 @@ pub fn update_health_indicator(
     mut query: Query<&mut Text, With<HealthIndicator>>,
 ) {
     if let Ok(mut text) = query.get_single_mut() {
-        let hearts = match health.health {
-            3 => "♥ ♥ ♥",
-            2 => "♥ ♥ ♡",
-            1 => "♥ ♡ ♡",
-            _ => "♡ ♡ ♡",
-        };
-
         // Section 0: "Health: " (ne change pas)
         // Section 1: "X/3" avec couleur
         let health_color = match health.health {
@@ -191,11 +176,8 @@ pub fn update_health_indicator(
             _ => Color::srgb(1.0, 0.0, 0.0), // Rouge
         };
 
-        text.sections[1].value = format!("{}/3\n", health.health);
+        text.sections[1].value = format!("{}/3", health.health);
         text.sections[1].style.color = health_color;
-
-        // Section 2: coeurs
-        text.sections[2].value = hearts.to_string();
     }
 }
 
