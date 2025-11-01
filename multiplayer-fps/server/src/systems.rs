@@ -207,7 +207,7 @@ fn perform_raycast_hit(
     spawn_rotation: &mut ResMut<SpawnRotation>,
 ) {
     const MAX_RAYCAST_DISTANCE: f32 = 1000.0; // Portée maximale
-    const STEP_SIZE: f32 = 0.05; // Précision du raycast augmentée (5cm au lieu de 10cm)
+    const STEP_SIZE: f32 = 0.02; // Précision du raycast très élevée (2cm pour meilleure détection)
 
     println!("Starting raycast: start={:?}, dir={:?}", start, direction);
 

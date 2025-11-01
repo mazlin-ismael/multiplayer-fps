@@ -90,7 +90,7 @@ pub fn setup_hud(
                     },
                 ),
                 TextSection::new(
-                    "❤ ❤ ❤",
+                    "♥ ♥ ♥",
                     TextStyle {
                         font_size: 20.0,
                         color: Color::srgb(1.0, 0.2, 0.2),
@@ -176,10 +176,10 @@ pub fn update_health_indicator(
 ) {
     if let Ok(mut text) = query.get_single_mut() {
         let hearts = match health.health {
-            3 => "❤ ❤ ❤",
-            2 => "❤ ❤ 🖤",
-            1 => "❤ 🖤 🖤",
-            _ => "🖤 🖤 🖤",
+            3 => "♥ ♥ ♥",
+            2 => "♥ ♥ ♡",
+            1 => "♥ ♡ ♡",
+            _ => "♡ ♡ ♡",
         };
 
         // Section 0: "Health: " (ne change pas)
