@@ -61,9 +61,10 @@ pub fn setup_hud(
             position_type: PositionType::Absolute,
             left: Val::Px(20.0),
             bottom: Val::Px(20.0),
-            width: Val::Px(200.0),
-            height: Val::Px(40.0),
+            width: Val::Px(180.0),
+            height: Val::Px(50.0),
             padding: UiRect::all(Val::Px(10.0)),
+            flex_direction: FlexDirection::Column,
             ..default()
         },
         background_color: Color::srgba(0.1, 0.1, 0.1, 0.8).into(),
@@ -71,14 +72,32 @@ pub fn setup_hud(
     })
     .with_children(|parent| {
         parent.spawn((
-            TextBundle::from_section(
-                "❤ ❤ ❤",
-                TextStyle {
-                    font_size: 24.0,
-                    color: Color::srgb(1.0, 0.2, 0.2),
-                    ..default()
-                },
-            ),
+            TextBundle::from_sections([
+                TextSection::new(
+                    "Health: ",
+                    TextStyle {
+                        font_size: 16.0,
+                        color: Color::srgb(0.7, 0.7, 0.7),
+                        ..default()
+                    },
+                ),
+                TextSection::new(
+                    "3/3\n",
+                    TextStyle {
+                        font_size: 16.0,
+                        color: Color::srgb(0.0, 1.0, 0.0),
+                        ..default()
+                    },
+                ),
+                TextSection::new(
+                    "❤ ❤ ❤",
+                    TextStyle {
+                        font_size: 20.0,
+                        color: Color::srgb(1.0, 0.2, 0.2),
+                        ..default()
+                    },
+                ),
+            ]),
             HealthIndicator,
         ));
     });
@@ -162,7 +181,21 @@ pub fn update_health_indicator(
             1 => "❤ 🖤 🖤",
             _ => "🖤 🖤 🖤",
         };
-        text.sections[0].value = hearts.to_string();
+
+        // Section 0: "Health: " (ne change pas)
+        // Section 1: "X/3" avec couleur
+        let health_color = match health.health {
+            3 => Color::srgb(0.0, 1.0, 0.0), // Vert
+            2 => Color::srgb(1.0, 0.8, 0.0), // Jaune
+            1 => Color::srgb(1.0, 0.3, 0.0), // Orange
+            _ => Color::srgb(1.0, 0.0, 0.0), // Rouge
+        };
+
+        text.sections[1].value = format!("{}/3\n", health.health);
+        text.sections[1].style.color = health_color;
+
+        // Section 2: coeurs
+        text.sections[2].value = hearts.to_string();
     }
 }
 
@@ -182,16 +215,17 @@ pub fn update_scoreboard(
             "Top: -- (0)".to_string()
         };
 
-        // Trouver le score local
-        let local_score = if let Some(local_id) = player_scores.local_player_id {
-            player_scores.scores.get(&local_id)
-                .map(|(_, score)| *score)
-                .unwrap_or(0)
+        // Trouver le score local avec le vrai nom
+        let local_text = if let Some(local_id) = player_scores.local_player_id {
+            let (name, score) = player_scores.scores.get(&local_id)
+                .map(|(n, s)| (n.clone(), *s))
+                .unwrap_or((player_scores.local_player_name.clone(), 0));
+            format!("{}: {}", name, score)
         } else {
-            0
+            format!("{}: 0", player_scores.local_player_name)
         };
 
-        text.sections[0].value = format!("{}\nYou: {}", top_text, local_score);
+        text.sections[0].value = format!("{}\n{}", top_text, local_text);
     }
 }
 

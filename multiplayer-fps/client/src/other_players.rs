@@ -37,10 +37,31 @@ pub struct OtherPlayers {
 }
 
 // Resource pour tracker les scores de tous les joueurs (incluant local)
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct PlayerScores {
     pub scores: HashMap<u64, (String, u32)>, // player_id -> (name, score)
     pub local_player_id: Option<u64>,
+    pub local_player_name: String, // Nom du joueur local
+}
+
+impl Default for PlayerScores {
+    fn default() -> Self {
+        Self {
+            scores: HashMap::new(),
+            local_player_id: None,
+            local_player_name: String::new(),
+        }
+    }
+}
+
+impl PlayerScores {
+    pub fn new(local_name: String) -> Self {
+        Self {
+            scores: HashMap::new(),
+            local_player_id: None,
+            local_player_name: local_name,
+        }
+    }
 }
 
 // Système pour recevoir les messages du serveur sur les autres joueurs
@@ -183,8 +204,8 @@ pub fn receive_other_players_system(
                         // Définir le player_id local si pas encore fait
                         if player_scores.local_player_id.is_none() {
                             player_scores.local_player_id = Some(player_id);
-                            // Initialiser le score du joueur local
-                            player_scores.scores.insert(player_id, ("You".to_string(), 0));
+                            // Initialiser le score du joueur local avec son vrai nom
+                            player_scores.scores.insert(player_id, (player_scores.local_player_name.clone(), 0));
                         }
 
                         // Mettre à jour la santé locale
@@ -220,8 +241,8 @@ pub fn receive_other_players_system(
                         // Définir le player_id local si pas encore fait
                         if player_scores.local_player_id.is_none() {
                             player_scores.local_player_id = Some(player_id);
-                            // Initialiser le score du joueur local
-                            player_scores.scores.insert(player_id, ("You".to_string(), 0));
+                            // Initialiser le score du joueur local avec son vrai nom
+                            player_scores.scores.insert(player_id, (player_scores.local_player_name.clone(), 0));
                         }
 
                         // Mettre à jour la santé locale
@@ -247,8 +268,8 @@ pub fn receive_other_players_system(
                             player_scores.local_player_id = Some(player_id);
                         }
 
-                        // Mettre à jour ou insérer le score du joueur local
-                        player_scores.scores.insert(player_id, ("You".to_string(), new_score));
+                        // Mettre à jour ou insérer le score du joueur local avec son vrai nom
+                        player_scores.scores.insert(player_id, (player_scores.local_player_name.clone(), new_score));
                         println!("LOCAL PLAYER score updated to {}!", new_score);
                     } else {
                         // C'est un autre joueur

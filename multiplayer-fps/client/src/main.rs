@@ -23,7 +23,7 @@ use ui_hud::{setup_hud, update_health_indicator, update_scoreboard, update_minim
 fn main() {
     let addr = get_server_address();
     let player_name = get_player_name();
-    let (client, transport) = create_network_resources(addr, player_name);
+    let (client, transport) = create_network_resources(addr, player_name.clone());
 
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -46,7 +46,7 @@ fn main() {
         .insert_resource(CursorLocked(false))
         .insert_resource(NetworkUpdateTimer::default())
         .insert_resource(OtherPlayers::default()) // NOUVEAU
-        .insert_resource(PlayerScores::default()) // Scores de tous les joueurs
+        .insert_resource(PlayerScores::new(player_name)) // Scores de tous les joueurs (avec nom local)
         .insert_resource(CrosshairSpawned::default()) // NOUVEAU
         .insert_resource(ReloadIndicatorSpawned::default()) // NOUVEAU
         .insert_resource(ShootCooldown::default()) // Cooldown de tir
