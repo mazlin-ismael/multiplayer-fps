@@ -212,7 +212,7 @@ pub fn update_scoreboard(
         let top_text = if let Some((_, (name, score))) = top_player {
             format!("Top: {} ({})", name, score)
         } else {
-            "Top: -- (0)".to_string()
+            "Top: None".to_string()
         };
 
         // Trouver le score local avec le vrai nom
