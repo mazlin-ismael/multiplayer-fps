@@ -147,28 +147,30 @@ impl Default for FpsController {
 }
 
 /// Vérifie si une position collidrait avec un mur
-fn check_collision_at_position(pos: Vec3, map: &shared::GameMap) -> bool {
+/// Prend en compte la rotation du tank pour faire pivoter les points de collision
+fn check_collision_at_position(pos: Vec3, rotation: Quat, map: &shared::GameMap) -> bool {
     // Dimensions du tank (en mètres)
     // CHASSIS: 1.2m large × 1.8m profond
     // CHENILLES: ajoutent 0.125m de chaque côté (0.65 + 0.075 = 0.725m du centre)
     // Total: 1.45m de largeur, 1.8m de profondeur
 
-    // On vérifie 8 points autour du tank + le centre (9 points au total)
-    // Rayon de collision: 0.8m pour couvrir les chenilles et le châssis
-    let check_points = [
+    // Points de collision en coordonnées LOCALES du tank (avant rotation)
+    let local_check_points = [
         Vec3::new(0.0, 0.0, 0.0),      // Centre
-        Vec3::new(0.75, 0.0, 0.9),     // Avant-droit
-        Vec3::new(-0.75, 0.0, 0.9),    // Avant-gauche
-        Vec3::new(0.75, 0.0, -0.9),    // Arrière-droit
-        Vec3::new(-0.75, 0.0, -0.9),   // Arrière-gauche
-        Vec3::new(0.75, 0.0, 0.0),     // Milieu-droit
-        Vec3::new(-0.75, 0.0, 0.0),    // Milieu-gauche
-        Vec3::new(0.0, 0.0, 0.9),      // Milieu-avant
-        Vec3::new(0.0, 0.0, -0.9),     // Milieu-arrière
+        Vec3::new(0.75, 0.0, 0.9),     // Avant-droit (local)
+        Vec3::new(-0.75, 0.0, 0.9),    // Avant-gauche (local)
+        Vec3::new(0.75, 0.0, -0.9),    // Arrière-droit (local)
+        Vec3::new(-0.75, 0.0, -0.9),   // Arrière-gauche (local)
+        Vec3::new(0.75, 0.0, 0.0),     // Milieu-droit (local)
+        Vec3::new(-0.75, 0.0, 0.0),    // Milieu-gauche (local)
+        Vec3::new(0.0, 0.0, 0.9),      // Milieu-avant (local)
+        Vec3::new(0.0, 0.0, -0.9),     // Milieu-arrière (local)
     ];
 
-    for offset in &check_points {
-        let check_pos = pos + *offset;
+    for local_offset in &local_check_points {
+        // IMPORTANT: Transformer le point local en coordonnées monde avec la rotation
+        let world_offset = rotation * *local_offset;
+        let check_pos = pos + world_offset;
         let tile_x = check_pos.x.floor() as i32;
         let tile_z = check_pos.z.floor() as i32;
 
@@ -196,6 +198,9 @@ pub fn fps_controller_system(
     current_map: Res<CurrentMap>,
 ) {
     for (mut transform, mut ctrl) in query.iter_mut() {
+        // Sauvegarder la rotation actuelle
+        let old_rotation = transform.rotation;
+
         // rotation seulement si le curseur est verrouillé
         if cursor_state.locked {
             for ev in mouse_motion.read() {
@@ -208,7 +213,21 @@ pub fn fps_controller_system(
 
         let yaw_rot = Quat::from_axis_angle(Vec3::Y, ctrl.yaw);
         let pitch_rot = Quat::from_axis_angle(Vec3::X, ctrl.pitch);
-        transform.rotation = yaw_rot * pitch_rot;
+        let new_rotation = yaw_rot * pitch_rot;
+
+        // Vérifier la collision avec la nouvelle rotation
+        if let Some(map) = &current_map.0 {
+            if check_collision_at_position(transform.translation, new_rotation, map) {
+                // La rotation causerait une collision, annuler
+                // (on garde old_rotation, donc on ne change pas transform.rotation)
+            } else {
+                // Rotation OK, l'appliquer
+                transform.rotation = new_rotation;
+            }
+        } else {
+            // Pas de map, autoriser la rotation
+            transform.rotation = new_rotation;
+        }
 
         // déplacement avec détection de collision
         let mut dir = Vec3::ZERO;
@@ -238,7 +257,7 @@ pub fn fps_controller_system(
 
             // Vérifier la collision seulement si on a une map
             if let Some(map) = &current_map.0 {
-                if !check_collision_at_position(new_position, map) {
+                if !check_collision_at_position(new_position, transform.rotation, map) {
                     // Pas de collision, on peut bouger
                     transform.translation = new_position;
                 }

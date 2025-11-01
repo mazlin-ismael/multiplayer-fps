@@ -67,7 +67,7 @@ pub fn setup_hud(
             flex_direction: FlexDirection::Column,
             ..default()
         },
-        background_color: Color::srgba(0.1, 0.1, 0.1, 0.8).into(),
+        // Pas de background (transparent)
         ..default()
     })
     .with_children(|parent| {
