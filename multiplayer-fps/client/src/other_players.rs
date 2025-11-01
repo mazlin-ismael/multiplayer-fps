@@ -54,7 +54,8 @@ pub fn receive_other_players_system(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut player_query: Query<&mut OtherPlayer>,
     children_query: Query<&Children>,
-    mut transform_query: Query<&mut Transform>,
+    mut transform_query: Query<&mut Transform, Without<crate::scene::LocalPlayer>>,
+    mut local_player_query: Query<&mut Transform, With<crate::scene::LocalPlayer>>,
     turret_query: Query<Entity, With<TankTurret>>,
     // Ajout pour traiter aussi les messages MapData
     mut current_map: ResMut<crate::network::CurrentMap>,
@@ -225,22 +226,42 @@ pub fn receive_other_players_system(
 
                         // Mettre à jour la santé locale
                         local_health.health = health;
-                        println!("LOCAL PLAYER respawned with {} health!", health);
+
+                        // IMPORTANT: Téléporter le joueur local à la nouvelle position
+                        if let Ok(mut local_transform) = local_player_query.get_single_mut() {
+                            local_transform.translation = Vec3::new(position[0], position[1], position[2]);
+                            println!("LOCAL PLAYER respawned at {:?} with {} health!", position, health);
+                        } else {
+                            println!("ERROR: Could not find local player to teleport!");
+                        }
                     }
                 }
 
                 ServerMessage::ScoreUpdate { player_id, new_score } => {
                     println!("Player {} score updated to {}", player_id, new_score);
 
-                    // Mettre à jour le score dans la resource
-                    if let Some((name, score)) = player_scores.scores.get_mut(&player_id) {
-                        *score = new_score;
-                    }
+                    // Vérifier si c'est le joueur local ou un autre
+                    if !other_players.players.contains_key(&player_id) {
+                        // C'est le joueur local
+                        if player_scores.local_player_id.is_none() {
+                            player_scores.local_player_id = Some(player_id);
+                        }
 
-                    // Mettre à jour le score dans le component si c'est un autre joueur
-                    if let Some(&entity) = other_players.players.get(&player_id) {
-                        if let Ok(mut other_player) = player_query.get_mut(entity) {
-                            other_player.score = new_score;
+                        // Mettre à jour ou insérer le score du joueur local
+                        player_scores.scores.insert(player_id, ("You".to_string(), new_score));
+                        println!("LOCAL PLAYER score updated to {}!", new_score);
+                    } else {
+                        // C'est un autre joueur
+                        // Mettre à jour le score dans la resource
+                        if let Some((_, score)) = player_scores.scores.get_mut(&player_id) {
+                            *score = new_score;
+                        }
+
+                        // Mettre à jour le score dans le component
+                        if let Some(&entity) = other_players.players.get(&player_id) {
+                            if let Ok(mut other_player) = player_query.get_mut(entity) {
+                                other_player.score = new_score;
+                            }
                         }
                     }
                 }
