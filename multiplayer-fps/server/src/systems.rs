@@ -123,59 +123,28 @@ pub fn handle_connection_events(
 }
 
 /// Vérifie si une position collidrait avec un mur (validation serveur)
-/// Prend en compte la rotation du tank pour faire pivoter les points de collision
+/// Version simplifiée compatible avec Rapier côté client
+/// Rapier utilise Collider::capsule_y(0.85, 0.3) donc rayon 0.3m
 fn check_collision_at_position(pos: Vec3, rotation: [f32; 2], map: &GameMap) -> bool {
-    // Dimensions du tank (identique au client)
-    // CHASSIS: 1.2m large × 1.8m profond
-    // CHENILLES: ajoutent 0.125m de chaque côté (0.65 + 0.075 = 0.725m du centre)
-    // Total: 1.45m de largeur, 1.8m de profondeur
-    // MARGES: +0.1m de sécurité pour éviter les glissements dans les murs
+    // Vérification simplifiée pour être cohérente avec Rapier
+    // Capsule rayon 0.3m, on vérifie 5 points suffisent (pas 21)
+    // Centre + 4 points aux extrémités du rayon
 
-    // Points de collision AUGMENTÉS pour meilleure précision (21 points)
-    // Marges augmentées: ±0.85m en x (au lieu de 0.75), ±1.0m en z (au lieu de 0.9)
     let local_check_points = [
-        // Centre
-        Vec3::new(0.0, 0.0, 0.0),
-
-        // 4 Coins (avec marge de sécurité)
-        Vec3::new(0.85, 0.0, 1.0),      // Avant-droit
-        Vec3::new(-0.85, 0.0, 1.0),     // Avant-gauche
-        Vec3::new(0.85, 0.0, -1.0),     // Arrière-droit
-        Vec3::new(-0.85, 0.0, -1.0),    // Arrière-gauche
-
-        // 4 Milieux des côtés
-        Vec3::new(0.85, 0.0, 0.0),      // Milieu-droit
-        Vec3::new(-0.85, 0.0, 0.0),     // Milieu-gauche
-        Vec3::new(0.0, 0.0, 1.0),       // Milieu-avant
-        Vec3::new(0.0, 0.0, -1.0),      // Milieu-arrière
-
-        // 8 Points intermédiaires pour couvrir les côtés (évite glissement)
-        Vec3::new(0.85, 0.0, 0.5),      // Quart avant-droit
-        Vec3::new(0.85, 0.0, -0.5),     // Quart arrière-droit
-        Vec3::new(-0.85, 0.0, 0.5),     // Quart avant-gauche
-        Vec3::new(-0.85, 0.0, -0.5),    // Quart arrière-gauche
-        Vec3::new(0.42, 0.0, 1.0),      // Quart avant-droit (avant)
-        Vec3::new(-0.42, 0.0, 1.0),     // Quart avant-gauche (avant)
-        Vec3::new(0.42, 0.0, -1.0),     // Quart arrière-droit (arrière)
-        Vec3::new(-0.42, 0.0, -1.0),    // Quart arrière-gauche (arrière)
-
-        // 4 Points supplémentaires aux positions critiques
-        Vec3::new(0.6, 0.0, 0.7),       // Avant-droit intérieur
-        Vec3::new(-0.6, 0.0, 0.7),      // Avant-gauche intérieur
-        Vec3::new(0.6, 0.0, -0.7),      // Arrière-droit intérieur
-        Vec3::new(-0.6, 0.0, -0.7),     // Arrière-gauche intérieur
+        Vec3::new(0.0, 0.0, 0.0),      // Centre
+        Vec3::new(0.4, 0.0, 0.4),      // Avant-droit (marge rayon capsule)
+        Vec3::new(-0.4, 0.0, 0.4),     // Avant-gauche
+        Vec3::new(0.4, 0.0, -0.4),     // Arrière-droit
+        Vec3::new(-0.4, 0.0, -0.4),    // Arrière-gauche
     ];
 
     // Convertir rotation [yaw, pitch] en Quaternion
     let yaw = rotation[0];
-    let pitch = rotation[1];
     let yaw_quat = Quat::from_axis_angle(Vec3::Y, yaw);
-    let pitch_quat = Quat::from_axis_angle(Vec3::X, pitch);
-    let rotation_quat = yaw_quat * pitch_quat;
 
     for local_offset in &local_check_points {
-        // Transformer le point local en coordonnées monde avec la rotation
-        let world_offset = rotation_quat * *local_offset;
+        // Transformer avec rotation YAW seulement (pas pitch)
+        let world_offset = yaw_quat * *local_offset;
         let check_pos = pos + world_offset;
         let tile_x = check_pos.x.floor() as i32;
         let tile_z = check_pos.z.floor() as i32;
@@ -213,16 +182,16 @@ pub fn handle_player_messages(
                     ClientMessage::PlayerMovement { position, rotation } => {
                         // Trouver le player_id correspondant
                         if let Some(player_id) = registry.get_player_id_from_temp(client_id_u64) {
-                            // VALIDATION: Vérifier que la position+rotation ne collide pas avec un mur
+                            // VALIDATION LÉGÈRE: Vérifier anti-cheat basique (pas de téléportation évidente)
+                            // Rapier gère déjà les collisions côté client, donc on fait confiance
                             let pos_vec = Vec3::new(position[0], position[1], position[2]);
                             if check_collision_at_position(pos_vec, rotation, &map) {
-                                // Position/rotation invalide (dans un mur), ignorer ce mouvement
-                                println!("Player {} tried to move/rotate into wall at {:?} with rotation {:?}, rejecting",
-                                    player_id, position, rotation);
-                                continue;
+                                // Position suspecte mais on accepte quand même (warning seulement)
+                                // Car Rapier peut permettre des positions que notre check simple rejette
+                                println!("WARNING: Player {} at suspicious position {:?}", player_id, position);
                             }
 
-                            // Position et rotation valides, mettre à jour
+                            // Toujours mettre à jour et broadcaster pour synchronisation
                             registry.update_player_position(player_id, position, rotation);
 
                             // Broadcaster à tous les AUTRES clients
