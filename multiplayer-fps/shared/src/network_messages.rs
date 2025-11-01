@@ -22,6 +22,7 @@ pub enum ServerMessage {
         name: String,
         position: [f32; 3],
         health: u8,
+        score: u32,
     },
     // Mise à jour de la position d'un joueur
     PlayerUpdate {
@@ -53,6 +54,11 @@ pub enum ServerMessage {
         player_id: u64,
         position: [f32; 3],
         health: u8,
+    },
+    // Score d'un joueur mis à jour (kill)
+    ScoreUpdate {
+        player_id: u64,
+        new_score: u32,
     },
 }
 

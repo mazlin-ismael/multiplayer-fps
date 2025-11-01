@@ -82,6 +82,7 @@ pub fn handle_connection_events(
                             name: other_state.name.clone(),
                             position: other_state.position,
                             health: other_state.health,
+                            score: other_state.score,
                         };
                         server.send_message(*client_id, DefaultChannel::ReliableOrdered, join_message.to_bytes());
                     }
@@ -92,6 +93,7 @@ pub fn handle_connection_events(
                         name: name.clone(),
                         position: [map.spawn_x, 1.7, map.spawn_z],
                         health: 3,
+                        score: 0,
                     };
                     
                     for other_client_id in server.clients_id() {
@@ -372,8 +374,20 @@ fn perform_raycast_hit(
                         server.send_message(client_id, DefaultChannel::ReliableOrdered, death_message.to_bytes());
                     }
 
-                    // Le tueur récupère 1 point de vie
+                    // Le tueur récupère 1 point de vie et gagne 1 point (kill)
                     players.heal_player(shooter_id, 1);
+                    players.add_kill(shooter_id);
+
+                    // Informer tous les clients du nouveau score
+                    if let Some(killer_state) = players.players.get(&shooter_id) {
+                        let score_message = ServerMessage::ScoreUpdate {
+                            player_id: shooter_id,
+                            new_score: killer_state.score,
+                        };
+                        for client_id in server.clients_id() {
+                            server.send_message(client_id, DefaultChannel::ReliableOrdered, score_message.to_bytes());
+                        }
+                    }
 
                     // Respawn le joueur mort avec rotation des spawns
                     let spawn_index = spawn_rotation.get_next_spawn();

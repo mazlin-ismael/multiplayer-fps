@@ -10,6 +10,7 @@ pub struct OtherPlayer {
     pub player_id: u64,
     pub name: String,
     pub health: u8,
+    pub score: u32,
 }
 
 #[allow(dead_code)]
@@ -35,11 +36,19 @@ pub struct OtherPlayers {
     pub players: HashMap<u64, Entity>,
 }
 
+// Resource pour tracker les scores de tous les joueurs (incluant local)
+#[derive(Resource, Default)]
+pub struct PlayerScores {
+    pub scores: HashMap<u64, (String, u32)>, // player_id -> (name, score)
+    pub local_player_id: Option<u64>,
+}
+
 // Système pour recevoir les messages du serveur sur les autres joueurs
 pub fn receive_other_players_system(
     mut client: ResMut<RenetClient>,
     mut commands: Commands,
     mut other_players: ResMut<OtherPlayers>,
+    mut player_scores: ResMut<PlayerScores>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut player_query: Query<&mut OtherPlayer>,
@@ -68,8 +77,11 @@ pub fn receive_other_players_system(
                     }
                 }
 
-                ServerMessage::PlayerJoined { player_id, name, position, health } => {
-                    println!("Player {} ({}) joined at {:?} with {} health", player_id, name, position, health);
+                ServerMessage::PlayerJoined { player_id, name, position, health, score } => {
+                    println!("Player {} ({}) joined at {:?} with {} health and {} score", player_id, name, position, health, score);
+
+                    // Stocker le score du joueur
+                    player_scores.scores.insert(player_id, (name.clone(), score));
 
                     // Créer la représentation visuelle de l'autre joueur avec un modèle 3D procédural
                     let player_model = create_player_model(&mut commands, &mut meshes, &mut materials);
@@ -81,6 +93,7 @@ pub fn receive_other_players_system(
                             player_id,
                             name: name.clone(),
                             health,
+                            score,
                         },
                     ));
 
@@ -143,6 +156,9 @@ pub fn receive_other_players_system(
                     if let Some(entity) = other_players.players.remove(&player_id) {
                         commands.entity(entity).despawn_recursive();
                     }
+
+                    // Supprimer le score
+                    player_scores.scores.remove(&player_id);
                 }
 
                 ServerMessage::PlayerDamaged { player_id, new_health, attacker_id } => {
@@ -183,6 +199,22 @@ pub fn receive_other_players_system(
 
                         // Retirer le flash de dommage s'il existe
                         commands.entity(entity).remove::<DamageFlash>();
+                    }
+                }
+
+                ServerMessage::ScoreUpdate { player_id, new_score } => {
+                    println!("Player {} score updated to {}", player_id, new_score);
+
+                    // Mettre à jour le score dans la resource
+                    if let Some((name, score)) = player_scores.scores.get_mut(&player_id) {
+                        *score = new_score;
+                    }
+
+                    // Mettre à jour le score dans le component si c'est un autre joueur
+                    if let Some(&entity) = other_players.players.get(&player_id) {
+                        if let Ok(mut other_player) = player_query.get_mut(entity) {
+                            other_player.score = new_score;
+                        }
                     }
                 }
 

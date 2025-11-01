@@ -9,6 +9,7 @@ pub struct PlayerState {
     pub position: [f32; 3],
     pub rotation: [f32; 2], // yaw, pitch
     pub health: u8, // Points de vie (max 3)
+    pub score: u32, // Nombre de kills
 }
 
 #[derive(Resource, Default)]
@@ -37,6 +38,7 @@ impl PlayerRegistry {
             position: [0.0, 0.0, 0.0], // Sera mis à jour
             rotation: [0.0, 0.0],
             health: 3, // 3 points de vie au départ
+            score: 0, // Pas de kills au départ
         };
 
         self.players.insert(player_id, state);
@@ -109,6 +111,22 @@ impl PlayerRegistry {
             state.health = 3;
             state.position = position;
         }
+    }
+
+    // Incrémenter le score d'un joueur (kill)
+    pub fn add_kill(&mut self, player_id: u64) {
+        if let Some(state) = self.players.get_mut(&player_id) {
+            state.score += 1;
+            println!("Player {} scored a kill! Total score: {}", player_id, state.score);
+        }
+    }
+
+    // Obtenir le meilleur score et le joueur associé
+    pub fn get_top_player(&self) -> Option<(u64, &str, u32)> {
+        self.players
+            .iter()
+            .max_by_key(|(_, state)| state.score)
+            .map(|(id, state)| (*id, state.name.as_str(), state.score))
     }
 }
 
