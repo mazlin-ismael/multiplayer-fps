@@ -123,22 +123,33 @@ pub fn handle_connection_events(
 }
 
 /// Vérifie si une position collidrait avec un mur (validation serveur)
-fn check_collision_at_position(pos: Vec3, map: &GameMap) -> bool {
+/// Prend en compte la rotation du tank pour faire pivoter les points de collision
+fn check_collision_at_position(pos: Vec3, rotation: [f32; 2], map: &GameMap) -> bool {
     // Dimensions du tank (identique au client)
-    let check_points = [
+    // Points de collision en coordonnées LOCALES du tank
+    let local_check_points = [
         Vec3::new(0.0, 0.0, 0.0),      // Centre
-        Vec3::new(0.75, 0.0, 0.9),     // Avant-droit
-        Vec3::new(-0.75, 0.0, 0.9),    // Avant-gauche
-        Vec3::new(0.75, 0.0, -0.9),    // Arrière-droit
-        Vec3::new(-0.75, 0.0, -0.9),   // Arrière-gauche
-        Vec3::new(0.75, 0.0, 0.0),     // Milieu-droit
-        Vec3::new(-0.75, 0.0, 0.0),    // Milieu-gauche
-        Vec3::new(0.0, 0.0, 0.9),      // Milieu-avant
-        Vec3::new(0.0, 0.0, -0.9),     // Milieu-arrière
+        Vec3::new(0.75, 0.0, 0.9),     // Avant-droit (local)
+        Vec3::new(-0.75, 0.0, 0.9),    // Avant-gauche (local)
+        Vec3::new(0.75, 0.0, -0.9),    // Arrière-droit (local)
+        Vec3::new(-0.75, 0.0, -0.9),   // Arrière-gauche (local)
+        Vec3::new(0.75, 0.0, 0.0),     // Milieu-droit (local)
+        Vec3::new(-0.75, 0.0, 0.0),    // Milieu-gauche (local)
+        Vec3::new(0.0, 0.0, 0.9),      // Milieu-avant (local)
+        Vec3::new(0.0, 0.0, -0.9),     // Milieu-arrière (local)
     ];
 
-    for offset in &check_points {
-        let check_pos = pos + *offset;
+    // Convertir rotation [yaw, pitch] en Quaternion
+    let yaw = rotation[0];
+    let pitch = rotation[1];
+    let yaw_quat = Quat::from_axis_angle(Vec3::Y, yaw);
+    let pitch_quat = Quat::from_axis_angle(Vec3::X, pitch);
+    let rotation_quat = yaw_quat * pitch_quat;
+
+    for local_offset in &local_check_points {
+        // Transformer le point local en coordonnées monde avec la rotation
+        let world_offset = rotation_quat * *local_offset;
+        let check_pos = pos + world_offset;
         let tile_x = check_pos.x.floor() as i32;
         let tile_z = check_pos.z.floor() as i32;
 
@@ -175,15 +186,16 @@ pub fn handle_player_messages(
                     ClientMessage::PlayerMovement { position, rotation } => {
                         // Trouver le player_id correspondant
                         if let Some(player_id) = registry.get_player_id_from_temp(client_id_u64) {
-                            // VALIDATION: Vérifier que la position ne collide pas avec un mur
+                            // VALIDATION: Vérifier que la position+rotation ne collide pas avec un mur
                             let pos_vec = Vec3::new(position[0], position[1], position[2]);
-                            if check_collision_at_position(pos_vec, &map) {
-                                // Position invalide (dans un mur), ignorer ce mouvement
-                                println!("Player {} tried to move into wall at {:?}, rejecting", player_id, position);
+                            if check_collision_at_position(pos_vec, rotation, &map) {
+                                // Position/rotation invalide (dans un mur), ignorer ce mouvement
+                                println!("Player {} tried to move/rotate into wall at {:?} with rotation {:?}, rejecting",
+                                    player_id, position, rotation);
                                 continue;
                             }
 
-                            // Position valide, mettre à jour
+                            // Position et rotation valides, mettre à jour
                             registry.update_player_position(player_id, position, rotation);
 
                             // Broadcaster à tous les AUTRES clients
